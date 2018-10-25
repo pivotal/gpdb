@@ -1,0 +1,5 @@
+comment = 'PXF Foreign Data Wrapper for Greenplum 6'
+default_version = '1.0'
+module_pathname = '$libdir/pxf_fdw'
+relocatable = true
+
