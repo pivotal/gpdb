@@ -37,19 +37,23 @@ static char *const SERVER_OPTION_LOCATION = "location";
 /*
  * FDW-specific information for RelOptInfo.fdw_private.
  */
-typedef struct PxfFdwPlanState
+typedef struct PxfPlanState
 {
 	char             *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
 	char             *location; /* data location */
-	List             *options;     /* merged COPY options, excluding filename */
-	BlockNumber      pages;        /* estimate of file's physical size */
-	double           ntuples;      /* estimate of number of rows in file */
-	gphadoop_context *context;
+	List             *options;  /* merged COPY options, excluding filename */
+	BlockNumber      pages;     /* estimate of file's physical size */
+	double           ntuples;   /* estimate of number of rows in file */
+	gphadoop_context *context;  /* temporary context */
+	char             *buffer;
 
-} PxfFdwPlanState;
+} PxfPlanState;
 
 extern Datum
 pxf_fdw_handler(PG_FUNCTION_ARGS);
+
+extern Datum
+pxf_fdw_validator(PG_FUNCTION_ARGS);
 
 /*
  * SQL functions
@@ -290,19 +294,22 @@ pxfGetForeignRelSize(PlannerInfo *root,
 {
 	elog(DEBUG5, "PXF_FWD: pxfGetForeignRelSize");
 
-	PxfFdwPlanState *fdw_private;
+	PxfPlanState *fdw_private;
 
 	/*
 	 * Fetch options.  We only need protocol at this point, but we might as
 	 * well get everything and not need to re-fetch it later in planning.
 	 */
-	fdw_private = (PxfFdwPlanState *) palloc(sizeof(PxfFdwPlanState));
+	fdw_private = (PxfPlanState *) palloc(sizeof(PxfPlanState));
 	pxfGetOptions(foreigntableid,
 	              &fdw_private->protocol,
 	              &fdw_private->location,
 	              &fdw_private->options);
 
-	elog(DEBUG2, "PXF_FWD: Protocol for PXF_FWD is %s", fdw_private->protocol);
+	elog(DEBUG2,
+	     "PXF_FWD: Protocol %s, Location %s",
+	     fdw_private->protocol,
+	     fdw_private->location);
 
 	baserel->fdw_private = (void *) fdw_private;
 	// FIXME: populate with an estimate of the number of rows in the foreign table
@@ -326,7 +333,7 @@ pxfGetForeignPaths(PlannerInfo *root,
 	                                        0,
 	                                        NIL,
 	                                        NULL,
-	                                        NULL);
+	                                        baserel->fdw_private);
 #else
 	path = (Path *) create_foreignscan_path(root, baserel,
 #if PG_VERSION_NUM >= 90600
@@ -357,17 +364,13 @@ pxfGetForeignPlan(PlannerInfo *root,
                   List *scan_clauses)
 {
 	Index scan_relid = baserel->relid;
-	Datum blob       = 0;
-	Const *blob2     = makeConst(INTERNALOID, 0, 0,
-	                             sizeof(blob),
-	                             blob,
-	                             false, false);
+
 	scan_clauses = extract_actual_clauses(scan_clauses, false);
 	return make_foreignscan(tlist,
 	                        scan_clauses,
 	                        scan_relid,
 	                        scan_clauses,
-	                        (void *) blob2);
+	                        baserel->fdw_private);
 }
 #else
 static ForeignScan *
@@ -413,18 +416,11 @@ pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 static void
 pxfBeginForeignScan(ForeignScanState *node, int eflags)
 {
-	elog(DEBUG5, "PXF_FWD: pxfBeginForeignScan");
+	elog(DEBUG2, "PXF_FWD: pxfBeginForeignScan");
 
-	ForeignScan *foreignScan     = (ForeignScan *) node->ss.ps.plan;
-	Relation    relation         = node->ss.ss_currentRelation;
-	Oid         foreigntableid   =
-		            RelationGetRelid(node->ss.ss_currentRelation);
-
-	char            *protocol;
-	char            *location;
-	List            *options;
-	PxfFdwPlanState *fdw_private = foreignScan->fdw_private;
-
+	Relation     relation     = node->ss.ss_currentRelation;
+	ForeignScan  *foreignScan = (ForeignScan *) node->ss.ps.plan;
+	PxfPlanState *fdw_private = (PxfPlanState *) foreignScan->fdw_private;
 
 	/*
 	 * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
@@ -432,11 +428,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
-	/* Fetch options of foreign table */
-	pxfGetOptions(foreigntableid,
-	              &protocol, &location, &options);
-
-	GPHDUri *uri = parseGPHDUri(location);
+	GPHDUri *uri = parseGPHDUri(fdw_private->location);
 	elog(DEBUG2,
 	     "PXF_FWD: pxfBeginForeignScan with URI: %s, Profile: %s",
 	     uri->uri,
@@ -454,6 +446,10 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	context->filterstr = NULL;
 
 	fdw_private->context = context;
+	fdw_private->buffer  = palloc0(sizeof(char) * 65536);
+
+	gpbridge_import_start(fdw_private->context);
+	elog(DEBUG2, "PXF_FWD: pxfBeginForeignScan is completed");
 }
 
 /*
@@ -467,7 +463,28 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 static TupleTableSlot *
 pxfIterateForeignScan(ForeignScanState *node)
 {
-	return NULL;
+	elog(DEBUG5, "PXF_FWD: pxfIterateForeignScan");
+
+	ForeignScan  *foreignScan = (ForeignScan *) node->ss.ps.plan;
+	PxfPlanState *fdw_private = (PxfPlanState *) foreignScan->fdw_private;
+
+	TupleTableSlot *slot = node->ss.ss_ScanTupleSlot;
+	bool           found;
+
+	/* initialize virtual tuple */
+	ExecClearTuple(slot);
+
+	int count = gpbridge_read(fdw_private->context, fdw_private->buffer, 65536);
+
+	found = count > 0;
+
+	if (found)
+		ExecStoreVirtualTuple(slot);
+
+	/* Remove error callback. */
+//	error_context_stack = errcallback.previous;
+
+	return slot;
 }
 
 /*
