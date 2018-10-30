@@ -1,13 +1,11 @@
-create extension pxf_fdw;
-CREATE SERVER 
-amazon_s3 
+CREATE extension pxf_fdw;
+CREATE SERVER
+amazon_s3
 FOREIGN DATA WRAPPER pxf_fdw
-OPTIONS (
-  wrapper 's3fdw'
-);
+OPTIONS (protocol 's3');
 
 CREATE USER MAPPING FOR public 
-SERVER amazon_s3 ;
+SERVER amazon_s3;
 
 CREATE FOREIGN TABLE stats(
   dvalue date,
@@ -16,7 +14,8 @@ CREATE FOREIGN TABLE stats(
   login_time interval,
   logout_time interval,
   available_time interval
-) SERVER amazon_s3
+)
+SERVER amazon_s3
 OPTIONS (
   hostname 's3.amazonaws.com',
   bucketname 'reports',
@@ -28,4 +27,3 @@ OPTIONS (
 );
 
 select * from stats;
-

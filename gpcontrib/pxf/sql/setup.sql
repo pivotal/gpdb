@@ -15,7 +15,7 @@ CREATE EXTERNAL TABLE pxf_read_test (a TEXT, b TEXT, c TEXT)
 LOCATION ('pxf://tmp/dummy1'
 '?FRAGMENTER=org.greenplum.pxf.api.examples.DemoFragmenter'
 '&ACCESSOR=org.greenplum.pxf.api.examples.DemoAccessor'
-'&RESOLVER=org.greenplum.pxf.api.examples.DemoTextResolver')
+'&RESOLVER=org.greenplum.pxf.api.examples.DemoTextResolver`')
 FORMAT 'TEXT' (DELIMITER ',');
 
 CREATE EXTERNAL TABLE pxf_readcustom_test (a TEXT, b TEXT, c TEXT)
