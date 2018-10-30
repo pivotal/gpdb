@@ -45,14 +45,18 @@ build_http_headers(PxfInputData *input)
 	if (rel != NULL)
 	{
 		/* format */
-		ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
-
-		/* pxf treats CSV as TEXT */
-		char	   *format = get_format_name(exttbl->fmtcode);
-
-		churl_headers_append(headers, "X-GP-FORMAT", format);
-
-		/* Record fields - name and type of each field */
+//		ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
+//
+//		/* pxf treats CSV as TEXT */
+//		char	   *format = get_format_name(exttbl->fmtcode);
+//
+		// FIXME: I am hardcoding TEXT here, because we don't have
+		// FIXME: a external table anymore to get the format.
+		// FIXME: Most likely, we will default to TEXT format and then
+		// FIXME: add other formats we support
+		churl_headers_append(headers, "X-GP-FORMAT", "TEXT");
+//
+//		/* Record fields - name and type of each field */
 		add_tuple_desc_httpheader(headers, rel);
 	}
 

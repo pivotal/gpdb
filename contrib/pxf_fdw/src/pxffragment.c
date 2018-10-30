@@ -69,9 +69,9 @@ get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 	/*
 	 * Call the work allocation algorithm
 	 */
-	data_fragments = filter_fragments_for_segment(data_fragments);
-	if (data_fragments == NIL)
-		return;
+//	data_fragments = filter_fragments_for_segment(data_fragments);
+//	if (data_fragments == NIL)
+//		return;
 
 	/*
 	 * Assign PXF location for the allocated fragments
@@ -86,8 +86,6 @@ get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 	}
 
 	uri->fragments = data_fragments;
-
-	return;
 }
 
 /*
@@ -103,7 +101,6 @@ assign_pxf_location_to_fragments(List *fragments)
 		FragmentData *fragment = (FragmentData *) lfirst(frag_c);
 		fragment->authority = get_authority();
 	}
-	return;
 }
 
 /*
@@ -420,8 +417,6 @@ init(GPHDUri *uri, ClientContext *cl_context)
 
 	/* set HTTP header that guarantees response in JSON format */
 	churl_headers_append(cl_context->http_headers, REST_HEADER_JSON_RESPONSE, NULL);
-
-	return;
 }
 
 /*

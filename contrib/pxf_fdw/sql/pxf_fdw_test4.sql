@@ -1,4 +1,4 @@
-CREATE extension pxf_fdw;
+CREATE EXTENSION pxf_fdw;
 
 CREATE SERVER demoserver
 FOREIGN DATA WRAPPER pxf_fdw
@@ -10,7 +10,4 @@ OPTIONS ("fs.s3a.awsAccessKeyId" 'your access key', "fs.s3a.awsSecretAccessKey" 
 
 CREATE FOREIGN TABLE demo_table (first TEXT, last TEXT)
 SERVER demoserver
-OPTIONS (location 'pxf://tmp/tmp? \
-		FRAGMENTER=org.greenplum.pxf.api.examples.DemoFragmenter& \
-		ACCESSOR=org.greenplum.pxf.api.examples.DemoAccessor& \
-		RESOLVER=org.greenplum.pxf.api.examples.DemoTextResolver');
+OPTIONS (location 'pxf://tmp/tmp?FRAGMENTER=org.greenplum.pxf.api.examples.DemoFragmenter&ACCESSOR=org.greenplum.pxf.api.examples.DemoAccessor&RESOLVER=org.greenplum.pxf.api.examples.DemoTextResolver');

@@ -25,9 +25,9 @@
 #include "parser/parsetree.h"
 #include "optimizer/restrictinfo.h"
 
-#include "pxffragment.h"
-#include "pxfutils.h"
-#include "pxffilters.h"
+#include "src/pxfbridge.h"
+#include "src/pxffragment.h"
+#include "src/pxfuriparser.h"
 
 PG_MODULE_MAGIC;
 
@@ -39,12 +39,14 @@ static char *const SERVER_OPTION_LOCATION = "location";
  */
 typedef struct PxfFdwPlanState
 {
-	char        *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
-	char        *location; /* data location */
-	List        *options;     /* merged COPY options, excluding filename */
-	BlockNumber pages;        /* estimate of file's physical size */
-	double      ntuples;      /* estimate of number of rows in file */
-}           PxfFdwPlanState;
+	char             *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
+	char             *location; /* data location */
+	List             *options;     /* merged COPY options, excluding filename */
+	BlockNumber      pages;        /* estimate of file's physical size */
+	double           ntuples;      /* estimate of number of rows in file */
+	gphadoop_context *context;
+
+} PxfFdwPlanState;
 
 extern Datum
 pxf_fdw_handler(PG_FUNCTION_ARGS);
@@ -286,7 +288,7 @@ pxfGetForeignRelSize(PlannerInfo *root,
                      RelOptInfo *baserel,
                      Oid foreigntableid)
 {
-	elog(DEBUG2, "pxfGetForeignRelSize");
+	elog(DEBUG5, "PXF_FWD: pxfGetForeignRelSize");
 
 	PxfFdwPlanState *fdw_private;
 
@@ -300,9 +302,10 @@ pxfGetForeignRelSize(PlannerInfo *root,
 	              &fdw_private->location,
 	              &fdw_private->options);
 
-	elog(DEBUG2, "Protocol for PXF_FWD is %s", fdw_private->protocol);
+	elog(DEBUG2, "PXF_FWD: Protocol for PXF_FWD is %s", fdw_private->protocol);
 
 	baserel->fdw_private = (void *) fdw_private;
+	// FIXME: populate with an estimate of the number of rows in the foreign table
 	baserel->rows        = 0;
 }
 
@@ -410,12 +413,18 @@ pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 static void
 pxfBeginForeignScan(ForeignScanState *node, int eflags)
 {
-	Relation *relation      = node->ss.ss_currentRelation;
-	Oid      foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
-//	ForeignScan *plan          = (ForeignScan *) node->ss.ps.plan;
-	char     *protocol;
-	char     *location;
-	List     *options;
+	elog(DEBUG5, "PXF_FWD: pxfBeginForeignScan");
+
+	ForeignScan *foreignScan     = (ForeignScan *) node->ss.ps.plan;
+	Relation    relation         = node->ss.ss_currentRelation;
+	Oid         foreigntableid   =
+		            RelationGetRelid(node->ss.ss_currentRelation);
+
+	char            *protocol;
+	char            *location;
+	List            *options;
+	PxfFdwPlanState *fdw_private = foreignScan->fdw_private;
+
 
 	/*
 	 * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
@@ -428,9 +437,23 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	              &protocol, &location, &options);
 
 	GPHDUri *uri = parseGPHDUri(location);
-	elog(DEBUG2, "PXF_FWD: pxfBeginForeignScan URI: %s, Profile: %s", uri->uri, uri->profile);
+	elog(DEBUG2,
+	     "PXF_FWD: pxfBeginForeignScan with URI: %s, Profile: %s",
+	     uri->uri,
+	     uri->profile);
 
-//	get_fragments(uri, relation, NULL);
+	get_fragments(uri, relation, NULL);
+
+	/* set context */
+	gphadoop_context *context = palloc0(sizeof(gphadoop_context));
+
+	context->gphd_uri = uri;
+	initStringInfo(&context->uri);
+	initStringInfo(&context->write_file_name);
+	context->relation  = relation;
+	context->filterstr = NULL;
+
+	fdw_private->context = context;
 }
 
 /*
