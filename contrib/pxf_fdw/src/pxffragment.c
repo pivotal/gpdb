@@ -29,8 +29,7 @@ static void pxf_array_element_end(void *state, bool isnull);
 void
 get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 {
-
-	List	   *data_fragments = NIL;
+	List	   *data_fragments;
 
 	/* Context for the Fragmenter API */
 	ClientContext client_context;
@@ -69,6 +68,8 @@ get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 	/*
 	 * Call the work allocation algorithm
 	 */
+	// FIXME: Since we only have a master call
+	// FIXME: we don't filter here for now
 //	data_fragments = filter_fragments_for_segment(data_fragments);
 //	if (data_fragments == NIL)
 //		return;
