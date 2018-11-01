@@ -41,8 +41,8 @@ static char *const SERVER_OPTION_LOCATION = "location";
 typedef struct PxfPlanState
 {
 	char        *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
-	char        *location; /* data location */
-	List        *options;  /* merged COPY options, excluding filename */
+	char        *location; /* Data location */
+	List        *options;  /* Merged options, excluding protocol & location */
 	BlockNumber pages;     /* estimate of file's physical size */
 	double      ntuples;   /* estimate of number of rows in file */
 
@@ -72,7 +72,6 @@ PG_FUNCTION_INFO_V1(pxf_fdw_validator);
 /*
  * FDW functions declarations
  */
-
 static void
 pxfGetForeignRelSize(PlannerInfo *root,
                      RelOptInfo *baserel,
@@ -416,23 +415,22 @@ static void
 pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
 }
-
 */
+
 /*
  * BeginForeignScan
  *   called during executor startup. perform any initialization 
  *   needed, but not start the actual scan. 
  */
-
 static void
 pxfBeginForeignScan(ForeignScanState *node, int eflags)
 {
 	elog(DEBUG2, "PXF_FWD: pxfBeginForeignScan");
 
-	Relation             relation     = node->ss.ss_currentRelation;
-	ForeignScan          *foreignScan = (ForeignScan *) node->ss.ps.plan;
-	PxfPlanState         *fdw_private =
-		                     (PxfPlanState *) foreignScan->fdw_private;
+	Relation     relation     = node->ss.ss_currentRelation;
+	ForeignScan  *foreignScan = (ForeignScan *) node->ss.ps.plan;
+	PxfPlanState *fdw_private = (PxfPlanState *) foreignScan->fdw_private;
+
 	CopyState            cstate;
 	PxfFdwExecutionState *pxfestate;
 
@@ -461,7 +459,6 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	context->filterstr = NULL;
 
 	gpbridge_import_start(context);
-	elog(DEBUG2, "PXF_FWD: pxfBeginForeignScan is completed");
 
 	/*
 	 * Create CopyState from FDW options.  We always acquire all columns, so
@@ -526,8 +523,10 @@ pxfIterateForeignScan(ForeignScanState *node)
 	 * foreign tables.
 	 */
 	ExecClearTuple(slot);
-	found = NextCopyFrom(pxfestate->cstate, NULL,
-	                     slot_get_values(slot), slot_get_isnull(slot),
+	found = NextCopyFrom(pxfestate->cstate,
+	                     NULL,
+	                     slot_get_values(slot),
+	                     slot_get_isnull(slot),
 	                     NULL);
 	if (found)
 		ExecStoreVirtualTuple(slot);
@@ -545,6 +544,58 @@ pxfIterateForeignScan(ForeignScanState *node)
 static void
 pxfReScanForeignScan(ForeignScanState *node)
 {
+	elog(DEBUG2, "PXF_FWD: pxfReScanForeignScan");
+
+	Relation             relation     = node->ss.ss_currentRelation;
+	ForeignScan          *foreignScan = (ForeignScan *) node->ss.ps.plan;
+	PxfPlanState         *fdw_private =
+		                     (PxfPlanState *) foreignScan->fdw_private;
+	PxfFdwExecutionState *pxfestate   =
+		                     (PxfFdwExecutionState *) node->fdw_state;
+
+	if (pxfestate->cstate->data_source_cb_extra)
+	{
+		gphadoop_context *context = (gphadoop_context *)
+			pxfestate->cstate->data_source_cb_extra;
+
+		if (context->gphd_uri)
+		{
+			elog(DEBUG2, "Freeing gphd_uri");
+			freeGPHDUri(context->gphd_uri);
+		}
+
+		elog(DEBUG2, "Freeing data_source_cb_extra");
+		pfree(pxfestate->cstate->data_source_cb_extra);
+	}
+
+	EndCopyFrom(pxfestate->cstate);
+
+
+	// FIXME: code below is duplicated in pxfBeginForeignScan
+	GPHDUri *uri = parseGPHDUri(fdw_private->location);
+	get_fragments(uri, relation, NULL);
+
+	/* set context */
+	gphadoop_context *context = palloc0(sizeof(gphadoop_context));
+
+	context->gphd_uri = uri;
+	initStringInfo(&context->uri);
+	initStringInfo(&context->write_file_name);
+	context->relation  = relation;
+	context->filterstr = NULL;
+
+	gpbridge_import_start(context);
+	elog(DEBUG2, "PXF_FWD: pxfReScanForeignScan is completed");
+
+	pxfestate->cstate        = BeginCopyFrom(node->ss.ss_currentRelation,
+	                                         NULL,
+	                                         false, /* is_program */
+	                                         &pxf_callback,  /* data_source_cb */
+	                                         context,  /* data_source_cb_extra */
+	                                         NIL,   /* attnamelist */
+	                                         fdw_private->options,
+	                                         NIL);  /* ao_segnos */
+	pxfestate->cstate->delim = ",";
 }
 
 /*
@@ -554,6 +605,41 @@ pxfReScanForeignScan(ForeignScanState *node)
 static void
 pxfEndForeignScan(ForeignScanState *node)
 {
+	elog(DEBUG2, "PXF_FWD: pxfEndForeignScan");
+
+	ForeignScan          *foreignScan = (ForeignScan *) node->ss.ps.plan;
+	PxfFdwExecutionState *pxfestate   =
+		                     (PxfFdwExecutionState *) node->fdw_state;
+
+	// Release resources
+	if (foreignScan->fdw_private)
+	{
+		elog(DEBUG2, "Freeing fdw_private");
+		pfree(foreignScan->fdw_private);
+	}
+
+	/* if pxfestate is NULL, we are in EXPLAIN; nothing to do */
+	if (pxfestate)
+	{
+		if (pxfestate->cstate->data_source_cb_extra)
+		{
+			gphadoop_context *context =
+				                 (gphadoop_context *) pxfestate->cstate->data_source_cb_extra;
+
+			if (context->gphd_uri)
+			{
+				elog(DEBUG2, "Freeing gphd_uri");
+				freeGPHDUri(context->gphd_uri);
+			}
+
+			elog(DEBUG2, "Freeing data_source_cb_extra");
+			pfree(pxfestate->cstate->data_source_cb_extra);
+		}
+
+		EndCopyFrom(pxfestate->cstate);
+		elog(DEBUG2, "Freeing pxfestate");
+		pfree(pxfestate);
+	}
 }
 
 /*
@@ -722,7 +808,6 @@ pxfBeginForeignModify(ModifyTableState *mtstate,
                       int subplan_index,
                       int eflags)
 {
-	return;
 }
 
 /*
@@ -772,7 +857,6 @@ static void
 pxfEndForeignModify(EState *estate,
                     ResultRelInfo *resultRelInfo)
 {
-	return;
 }
 
 /*
