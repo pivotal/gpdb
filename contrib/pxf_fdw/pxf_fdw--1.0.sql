@@ -18,9 +18,10 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw
 VALIDATOR pxf_fdw_validator
 HANDLER pxf_fdw_handler;
 
--- CREATE FOREIGN DATA WRAPPER s3_fdw
+-- CREATE FOREIGN DATA WRAPPER pxf_s3_fdw
+-- VALIDATOR pxf_fdw_validator
 -- HANDLER pxf_fdw_handler
--- OPTIONS ( protocol 's3' [, ... ];
+-- OPTIONS (protocol 's3');
 
 -- CREATE FUNCTION file_fdw_validator(text[], oid)
 -- RETURNS void
