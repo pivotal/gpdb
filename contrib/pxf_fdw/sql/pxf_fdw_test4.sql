@@ -4,7 +4,7 @@ CREATE SERVER demoserver
 FOREIGN DATA WRAPPER pxf_fdw
 OPTIONS (protocol 'demo');
 
-CREATE USER MAPPING FOR pivotal
+CREATE USER MAPPING FOR gpadmin
 SERVER demoserver
 OPTIONS ("fs.s3a.awsAccessKeyId" 'your access key', "fs.s3a.awsSecretAccessKey" 'your secret key');
 

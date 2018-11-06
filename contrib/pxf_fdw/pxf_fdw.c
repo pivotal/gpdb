@@ -40,21 +40,23 @@ static char *const SERVER_OPTION_LOCATION = "location";
  */
 typedef struct PxfPlanState
 {
-	char        *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
-	char        *location; /* Data location */
-	List        *options;  /* Merged options, excluding protocol & location */
+	char *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
+	char *location; /* Data location */
+	List *options;  /* Merged options, excluding protocol & location */
 //	BlockNumber pages;     /* estimate of file's physical size */
 //	double      ntuples;   /* estimate of number of rows in file */
-} PxfPlanState;
+}           PxfPlanState;
 
 /*
  * FDW-specific information for ForeignScanState.fdw_state.
  */
 typedef struct PxfFdwExecutionState
 {
-	List      *options; /* merged COPY options, excluding protocol and location */
+	char      *protocol; /* Storage type such as S3, ADL, GS, HDFS, HBase */
+	char      *location; /* Data location */
+	List      *options; /* merged options, excluding protocol & location */
 	CopyState cstate;   /* state of reading file */
-} PxfFdwExecutionState;
+}           PxfFdwExecutionState;
 
 extern Datum
 pxf_fdw_handler(PG_FUNCTION_ARGS);
@@ -205,8 +207,8 @@ pxfGetOptions(Oid foreigntableid,
 static int
 pxfCallback(void *outbuf, int datasize, void *extra);
 
-static CopyState
-createCopyState(PxfPlanState *fdw_private, Relation relation);
+static void
+initCopyState(PxfFdwExecutionState *estate, Relation relation);
 
 /*
  * Foreign-data wrapper handler functions:
@@ -337,36 +339,27 @@ pxfGetForeignPaths(PlannerInfo *root,
                    RelOptInfo *baserel,
                    Oid foreigntableid)
 {
-	Path *path;
-#if (PG_VERSION_NUM < 90500)
-	path = (Path *) create_foreignscan_path(root, baserel,
-	                                        baserel->rows,
-	                                        10,
-	                                        0,
-	                                        NIL,
-	                                        NULL,
-	                                        baserel->fdw_private);
-#else
-	path = (Path *) create_foreignscan_path(root, baserel,
-#if PG_VERSION_NUM >= 90600
-						NULL,
-#endif
-						baserel->rows,
-						10,
-						0,
-						NIL,
-						NULL,
-						NULL,
-						NIL);
-#endif
-	add_path(baserel, path);
+	elog(DEBUG5, "PXF_FWD: pxfGetForeignPaths");
+
+	/*
+	 * Create a ForeignPath node and add it as only possible path.	We use the
+	 * fdw_private to propagate the PxfPlanState. It will be propagated into
+	 * the fdw_private list of the Plan node.
+	 */
+	add_path(baserel, (Path *)
+		create_foreignscan_path(root, baserel,
+		                        baserel->rows,
+		                        10,
+		                        0,
+		                        NIL,
+		                        NULL,
+		                        baserel->fdw_private));
 }
 
 /*
  * GetForeignPlan
- *	create a ForeignScan plan node 
+ *	create a ForeignScan plan node
  */
-#if (PG_VERSION_NUM <= 90500)
 static ForeignScan *
 pxfGetForeignPlan(PlannerInfo *root,
                   RelOptInfo *baserel,
@@ -375,54 +368,31 @@ pxfGetForeignPlan(PlannerInfo *root,
                   List *tlist,
                   List *scan_clauses)
 {
+	elog(DEBUG5, "PXF_FWD: pxfGetForeignPlan");
+
 	Index scan_relid = baserel->relid;
 
+	/*
+	 * We have no native ability to evaluate restriction clauses, so we just
+	 * put all the scan_clauses into the plan node's qual list for the
+	 * executor to check.  So all we have to do here is strip RestrictInfo
+	 * nodes from the clauses and ignore pseudoconstants (which will be
+	 * handled elsewhere).
+	 */
 	scan_clauses = extract_actual_clauses(scan_clauses, false);
+
+	/* Create the ForeignScan node */
 	return make_foreignscan(tlist,
 	                        scan_clauses,
 	                        scan_relid,
-	                        scan_clauses,
-	                        baserel->fdw_private);
+	                        NIL,    /* no expressions to evaluate */
+	                        NIL);
 }
-#else
-static ForeignScan *
-pxfGetForeignPlan(PlannerInfo *root,
-						RelOptInfo *baserel,
-						Oid foreigntableid,
-						ForeignPath *best_path,
-						List *tlist,
-						List *scan_clauses,
-						Plan *outer_plan)
-{
-	// FIXME: When 90500 is merged we need to implement this
-	Index		scan_relid = baserel->relid;
-	scan_clauses = extract_actual_clauses(scan_clauses, false);
-
-	return make_foreignscan(tlist,
-			scan_clauses,
-			scan_relid,
-			scan_clauses,
-			NIL,
-			NIL,
-			NIL,
-			outer_plan);
-}
-#endif
-/*
- * ExplainForeignScan
- *   no extra info explain plan
- */
-/*
-static void
-pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
-{
-}
-*/
 
 /*
  * BeginForeignScan
- *   called during executor startup. perform any initialization 
- *   needed, but not start the actual scan. 
+ *   called during executor startup. perform any initialization
+ *   needed, but not start the actual scan.
  */
 static void
 pxfBeginForeignScan(ForeignScanState *node, int eflags)
@@ -432,10 +402,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	     "pxfBeginForeignScan Executing on segment: %d",
 	     GpIdentity.segindex);
 
-	Relation             relation     = node->ss.ss_currentRelation;
-	ForeignScan          *foreignScan = (ForeignScan *) node->ss.ps.plan;
-	PxfPlanState         *fdw_private =
-		                     (PxfPlanState *) foreignScan->fdw_private;
+	Relation             relation = node->ss.ss_currentRelation;
 	PxfFdwExecutionState *pxfestate;
 
 	/*
@@ -449,10 +416,13 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	 * BeginCopyFrom() again.
 	 */
 	pxfestate = (PxfFdwExecutionState *) palloc(sizeof(PxfFdwExecutionState));
-	pxfestate->options       = fdw_private->options;
-	pxfestate->cstate        = createCopyState(fdw_private, relation);
-	pxfestate->cstate->delim = ",";
 
+	pxfGetOptions(RelationGetRelid(relation),
+	              &pxfestate->protocol,
+	              &pxfestate->location,
+	              &pxfestate->options);
+
+	initCopyState(pxfestate, relation);
 	node->fdw_state = (void *) pxfestate;
 }
 
@@ -460,9 +430,9 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
  * IterateForeignScan
  *		Retrieve next row from the result set, or clear tuple slot to indicate
  *		EOF.
- *   Fetch one row from the foreign source, returning it in a tuple table slot 
- *    (the node's ScanTupleSlot should be used for this purpose). 
- *  Return NULL if no more rows are available. 
+ *   Fetch one row from the foreign source, returning it in a tuple table slot
+ *    (the node's ScanTupleSlot should be used for this purpose).
+ *  Return NULL if no more rows are available.
  */
 static TupleTableSlot *
 pxfIterateForeignScan(ForeignScanState *node)
@@ -523,10 +493,8 @@ pxfReScanForeignScan(ForeignScanState *node)
 	     "pxfReScanForeignScan Executing on segment: %d",
 	     GpIdentity.segindex);
 
-	Relation             relation     = node->ss.ss_currentRelation;
-	ForeignScan          *foreignScan = (ForeignScan *) node->ss.ps.plan;
-	PxfFdwExecutionState *pxfestate   =
-		                     (PxfFdwExecutionState *) node->fdw_state;
+	Relation             relation   = node->ss.ss_currentRelation;
+	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
 
 	if (pxfestate->cstate->data_source_cb_extra)
 	{
@@ -537,14 +505,12 @@ pxfReScanForeignScan(ForeignScanState *node)
 
 	EndCopyFrom(pxfestate->cstate);
 
-	pxfestate->cstate =
-		createCopyState((PxfPlanState *) foreignScan->fdw_private, relation);
-	pxfestate->cstate->delim = ",";
+	initCopyState(pxfestate, relation);
 }
 
 /*
  *EndForeignScan
- *	End the scan and release resources. 
+ *	End the scan and release resources.
  */
 static void
 pxfEndForeignScan(ForeignScanState *node)
@@ -590,6 +556,7 @@ pxfAddForeignUpdateTargets(Query *parsetree,
                            RangeTblEntry *target_rte,
                            Relation target_relation)
 {
+	elog(DEBUG5, "PXF_FWD: pxfAddForeignUpdateTargets");
 	Var         *var;
 	const char  *attrname;
 	TargetEntry *tle;
@@ -635,6 +602,7 @@ pxfPlanForeignModify(PlannerInfo *root,
                      Index resultRelation,
                      int subplan_index)
 {
+	elog(DEBUG5, "PXF_FWD: pxfPlanForeignModify");
 /*
 	CmdType		operation = plan->operation;
 	RangeTblEntry *rte = planner_rt_fetch(resultRelation, root);
@@ -682,7 +650,7 @@ pxfPlanForeignModify(PlannerInfo *root,
 		while ((col = bms_first_member(tmpset)) >= 0)
 		{
 			col += FirstLowInvalidHeapAttributeNumber;
-			if (col <= InvalidAttrNumber)		// shouldn't happen 
+			if (col <= InvalidAttrNumber)		// shouldn't happen
 				elog(ERROR, "system-column update is not supported");
 			targetAttrs = lappend_int(targetAttrs, col);
 		}
@@ -747,6 +715,7 @@ pxfBeginForeignModify(ModifyTableState *mtstate,
                       int subplan_index,
                       int eflags)
 {
+	elog(DEBUG5, "PXF_FWD: pxfBeginForeignModify");
 }
 
 /*
@@ -759,6 +728,7 @@ pxfExecForeignInsert(EState *estate,
                      TupleTableSlot *slot,
                      TupleTableSlot *planSlot)
 {
+	elog(DEBUG5, "PXF_FWD: pxfExecForeignInsert");
 	return NULL;
 }
 
@@ -772,6 +742,7 @@ pxfExecForeignUpdate(EState *estate,
                      TupleTableSlot *slot,
                      TupleTableSlot *planSlot)
 {
+	elog(DEBUG5, "PXF_FWD: pxfExecForeignUpdate");
 	return NULL;
 }
 
@@ -785,6 +756,7 @@ pxfExecForeignDelete(EState *estate,
                      TupleTableSlot *slot,
                      TupleTableSlot *planSlot)
 {
+	elog(DEBUG5, "PXF_FWD: pxfExecForeignDelete");
 	return NULL;
 }
 
@@ -796,6 +768,7 @@ static void
 pxfEndForeignModify(EState *estate,
                     ResultRelInfo *resultRelInfo)
 {
+	elog(DEBUG5, "PXF_FWD: pxfEndForeignModify");
 }
 
 /*
@@ -807,6 +780,7 @@ pxfEndForeignModify(EState *estate,
 static int
 pxfIsForeignRelUpdatable(Relation rel)
 {
+	elog(DEBUG5, "PXF_FWD: pxfIsForeignRelUpdatable");
 	/* updatable is INSERT, UPDATE and DELETE.
 	 */
 	return (1 << CMD_INSERT) | (1 << CMD_UPDATE) | (1 << CMD_DELETE);
@@ -819,6 +793,7 @@ pxfIsForeignRelUpdatable(Relation rel)
 static void
 pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
+	elog(DEBUG5, "PXF_FWD: pxfEpxfGetForeignPlanxplainForeignScan");
 /*
 	List	   *fdw_private;
 	char	   *sql;
@@ -844,6 +819,7 @@ pxfExplainForeignModify(ModifyTableState *mtstate,
                         int subplan_index,
                         ExplainState *es)
 {
+	elog(DEBUG5, "PXF_FWD: pxfExplainForeignModify");
 	if (es->verbose)
 	{
 		char *sql = strVal(list_nth(fdw_private,
@@ -862,6 +838,7 @@ pxfAnalyzeForeignTable(Relation relation,
                        AcquireSampleRowsFunc *func,
                        BlockNumber *totalpages)
 {
+	elog(DEBUG5, "PXF_FWD: pxfAnalyzeForeignTable");
 	*func = pxfAcquireSampleRowsFunc;
 	return false;
 }
@@ -875,7 +852,7 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
                          double *totalrows,
                          double *totaldeadrows)
 {
-
+	elog(DEBUG5, "PXF_FWD: pxfAcquireSampleRowsFunc");
 	totalrows     = 0;
 	totaldeadrows = 0;
 	return 0;
@@ -984,13 +961,13 @@ pxfCallback(void *outbuf, int datasize, void *extra)
 /*
  * Creates a context for the pxfCallback function
  */
-static CopyState
-createCopyState(PxfPlanState *fdw_private, Relation relation)
+static void
+initCopyState(PxfFdwExecutionState *estate, Relation relation)
 {
 	/* Parse the location option to a GPHDUri */
-	GPHDUri *uri = parseGPHDUri(fdw_private->location);
+	GPHDUri *uri = parseGPHDUri(estate->location);
 	elog(DEBUG2,
-	     "PXF_FWD: createCopyState with URI: %s, Profile: %s",
+	     "PXF_FWD: initCopyState with URI: %s, Profile: %s",
 	     uri->uri,
 	     uri->profile);
 
@@ -1011,12 +988,14 @@ createCopyState(PxfPlanState *fdw_private, Relation relation)
 	 * Create CopyState from FDW options.  We always acquire all columns, so
 	 * as to match the expected ScanTupleSlot signature.
 	 */
-	return BeginCopyFrom(relation,
-	                     NULL,
-	                     false, /* is_program */
-	                     &pxfCallback,  /* data_source_cb */
-	                     context,  /* data_source_cb_extra */
-	                     NIL,   /* attnamelist */
-	                     fdw_private->options,
-	                     NIL);  /* ao_segnos */
+	estate->cstate        = BeginCopyFrom(relation,
+	                                      NULL,
+	                                      false, /* is_program */
+	                                      &pxfCallback,  /* data_source_cb */
+	                                      context,  /* data_source_cb_extra */
+	                                      NIL,   /* attnamelist */
+	                                      estate->options,
+	                                      NIL);  /* ao_segnos */
+	// FIXME: Hardcoded delimiter for now
+	estate->cstate->delim = ",";
 }
