@@ -371,6 +371,14 @@ pxfGetForeignPlan(PlannerInfo *root,
 	elog(DEBUG5, "PXF_FWD: pxfGetForeignPlan");
 
 	Index scan_relid = baserel->relid;
+	List  *options   = NIL;
+
+	options = lappend(options, makeString("passing this value to all segments"));
+
+//	options = list_make1(makeDefElem("format", (Node *) makeString("csv")));
+//	DefElem *def = (DefElem *) linitial(options);
+//
+//	elog(DEBUG2, "value: %s", defGetString(def));
 
 	/*
 	 * We have no native ability to evaluate restriction clauses, so we just
@@ -386,7 +394,7 @@ pxfGetForeignPlan(PlannerInfo *root,
 	                        scan_clauses,
 	                        scan_relid,
 	                        NIL,    /* no expressions to evaluate */
-	                        NIL);
+	                        options);
 }
 
 /*
@@ -397,13 +405,16 @@ pxfGetForeignPlan(PlannerInfo *root,
 static void
 pxfBeginForeignScan(ForeignScanState *node, int eflags)
 {
-	elog(DEBUG5, "PXF_FWD: pxfBeginForeignScan");
-	elog(DEBUG2,
-	     "pxfBeginForeignScan Executing on segment: %d",
+	elog(DEBUG5, "PXF_FWD: pxfBeginForeignScan Executing on segment: %d",
 	     GpIdentity.segindex);
 
 	Relation             relation = node->ss.ss_currentRelation;
 	PxfFdwExecutionState *pxfestate;
+	ForeignScan          *plan    = (ForeignScan *) node->ss.ps.plan;
+
+	List  *options = plan->fdw_private;
+	Value *value   = linitial(options);
+	elog(DEBUG2, "Test value is : %s", value->val.str);
 
 	/*
 	 * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
@@ -437,9 +448,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 static TupleTableSlot *
 pxfIterateForeignScan(ForeignScanState *node)
 {
-	elog(DEBUG5, "PXF_FWD: pxfIterateForeignScan");
-	elog(DEBUG2,
-	     "pxfIterateForeignScan Executing on segment: %d",
+	elog(DEBUG5, "PXF_FWD: pxfIterateForeignScan Executing on segment: %d",
 	     GpIdentity.segindex);
 
 	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
@@ -488,9 +497,7 @@ pxfIterateForeignScan(ForeignScanState *node)
 static void
 pxfReScanForeignScan(ForeignScanState *node)
 {
-	elog(DEBUG5, "PXF_FWD: pxfReScanForeignScan");
-	elog(DEBUG2,
-	     "pxfReScanForeignScan Executing on segment: %d",
+	elog(DEBUG5, "PXF_FWD: pxfReScanForeignScan Executing on segment: %d",
 	     GpIdentity.segindex);
 
 	Relation             relation   = node->ss.ss_currentRelation;
@@ -515,9 +522,7 @@ pxfReScanForeignScan(ForeignScanState *node)
 static void
 pxfEndForeignScan(ForeignScanState *node)
 {
-	elog(DEBUG5, "PXF_FWD: pxfEndForeignScan");
-	elog(DEBUG2,
-	     "pxfEndForeignScan Executing on segment: %d",
+	elog(DEBUG5, "PXF_FWD: pxfEndForeignScan Executing on segment: %d",
 	     GpIdentity.segindex);
 
 	ForeignScan          *foreignScan = (ForeignScan *) node->ss.ps.plan;
@@ -548,7 +553,7 @@ pxfEndForeignScan(ForeignScanState *node)
 }
 
 /*
- * postgresAddForeignUpdateTargets
+ * pxfAddForeignUpdateTargets
  *    Add resjunk column(s) needed for update/delete on a foreign table
  */
 static void
@@ -793,7 +798,8 @@ pxfIsForeignRelUpdatable(Relation rel)
 static void
 pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
-	elog(DEBUG5, "PXF_FWD: pxfEpxfGetForeignPlanxplainForeignScan");
+	elog(DEBUG5, "PXF_FWD: pxfExplainForeignScan Executing on segment: %d",
+	     GpIdentity.segindex);
 /*
 	List	   *fdw_private;
 	char	   *sql;
@@ -910,7 +916,7 @@ pxfGetOptions(Oid foreigntableid,
 	prev = NULL;
 	foreach(lc, options)
 	{
-		DefElem *def = (DefElem *) lfirst(lc);
+		DefElem *def = (DefElem *) (lc)->data.ptr_value;
 
 		elog(DEBUG2, "PXF_FWD: pxfGetOptions Found option %s", def->defname);
 
