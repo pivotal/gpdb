@@ -592,10 +592,10 @@ else
 BLD_OS:=$(shell uname -s)
 endif
 AIX_LOADERS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so* libevent*.a
-Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dylib libcom_err.*.dylib libldap_r-*.dylib libk5crypto.*.dylib libkrb5support.*.dylib liblber-*.dylib libyaml*.dylib
+Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libcom_err.*.dylib libldap_r-*.dylib liblber-*.dylib libyaml*.dylib
 HP-UX_LOADERS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
-Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libkrb5.so* libcom_err.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libgssapi_krb5.so* libyaml*so*
-SunOS_LOADERS_LIBS=libcrypto.so* libssl.so.* libgcc_s.so.1 libz.so* libpq.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libcom_err.so* libkrb5.so* libyaml*so*
+Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libldap_r-*so* libyaml*so*
+SunOS_LOADERS_LIBS=libcrypto.so* libssl.so.* libgcc_s.so.1 libz.so* libpq.so* liblber*.so* libldap_r-*so* libcom_err.so* libyaml*so*
 Windows_LOADERS_LIBS=comerr32.dll gssapi32.dll k5sprt32.dll kclnt32.dll kfwlogon.dll krb4cred.dll krb4cred_en_us.dll krb524.dll krb5_32.dll krb5cred.dll krb5cred_en_us.dll krbcc32.dll krbv4w32.dll leashw32.dll nidmgr32.dll wshelp32.dll xpprof32.dll libpq.dll
 define tmpLOADERS_FILESET_LIB
 	$($(BLD_OS)_LOADERS_LIBS)
@@ -940,7 +940,7 @@ libcopy=(cd $(1) && $(TAR) cf - $(2)) | (cd $(3) && $(TAR) xvf -)$(check_pipe_fo
 copylibs : thirdparty-dist
 	if [ `uname -s` = 'SunOS' ]; then cp `ldd $(INSTLOC)/bin/psql | grep gcc | head -1 | awk '{print $$3}'` $(INSTLOC)/lib; fi
 	if [ `uname -s` = 'Darwin' ] ; then \
-	    for lib in `otool -L $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|libkrb5|curl|readline|numa' | awk '{print $$1}'`; do \
+	    for lib in `otool -L $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|curl|readline|numa' | awk '{print $$1}'`; do \
 	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
 	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
 	        if [ -f $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` ]; then \
