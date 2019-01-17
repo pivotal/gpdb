@@ -216,7 +216,7 @@ CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LI
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32 rhel6_x86_64 rhel7_x86_64)" ""
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX
@@ -985,11 +985,11 @@ copylibs : thirdparty-dist
 	fi
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
-ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64 aix7_ppc_64 win32 win64)" ""
+ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 aix5_ppc_64 aix7_ppc_64 win32 win64)" ""
 	# Copy curl header file
 	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/curl $(INSTLOC)/include/
 endif
-ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 win32 win64)" ""
+ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 win32 win64)" ""
 ifneq "$(BLD_ARCH)" "osx104_x86"
 	cp -rp $(BLD_THIRDPARTY_BIN_DIR)/openssl $(INSTLOC)/bin/
 	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/openssl $(INSTLOC)/include/
