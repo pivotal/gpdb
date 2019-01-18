@@ -594,7 +594,12 @@ endif
 AIX_LOADERS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so* libevent*.a
 Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libcom_err.*.dylib libldap_r-*.dylib liblber-*.dylib libyaml*.dylib
 HP-UX_LOADERS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
+# TODO: Remove the condition below once libldap is installed on SLES images
+ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
+Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libyaml*so*
+else
 Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libldap_r-*so* libyaml*so*
+endif
 SunOS_LOADERS_LIBS=libcrypto.so* libssl.so.* libgcc_s.so.1 libz.so* libpq.so* liblber*.so* libldap_r-*so* libcom_err.so* libyaml*so*
 Windows_LOADERS_LIBS=comerr32.dll gssapi32.dll k5sprt32.dll kclnt32.dll kfwlogon.dll krb4cred.dll krb4cred_en_us.dll krb524.dll krb5_32.dll krb5cred.dll krb5cred_en_us.dll krbcc32.dll krbv4w32.dll leashw32.dll nidmgr32.dll wshelp32.dll xpprof32.dll libpq.dll
 define tmpLOADERS_FILESET_LIB
