@@ -21,7 +21,7 @@ limitations under the License.
 
 import os
 import re
-import subprocess
+import subprocess32 as subprocess
 import shutil
 import pprint
 import time

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, re, subprocess
+import sys, os, re, subprocess32 as subprocess
 
 bindir = ''
 if os.path.exists('../../bin/pg_config'):

@@ -19,7 +19,7 @@ from mpp.models import MPPTestCase
 
 import os
 import shutil
-import subprocess
+import subprocess32 as subprocess
 import unittest2 as unittest
 
 from tinctest.lib import run_shell_command

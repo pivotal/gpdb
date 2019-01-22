@@ -29,7 +29,7 @@ import mpp.gpdb.tests.storage.walrepl.run
 
 import os
 import shutil
-import subprocess
+import subprocess32 as subprocess
 
 class basebackup_cases(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
 

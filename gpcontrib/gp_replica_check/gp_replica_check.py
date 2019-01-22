@@ -30,7 +30,7 @@ gp_replica_check.py -d "mydb1,mydb2,..." -r "hash,bitmap,gist,..."
 
 import argparse
 import sys
-import subprocess
+import subprocess32 as subprocess
 import threading
 import Queue
 import pipes  # for shell-quoting, pipes.quote()

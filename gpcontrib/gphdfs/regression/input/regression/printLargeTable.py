@@ -22,7 +22,7 @@ generate random dataset with seed i
 # Set up some globals, and import gptest 
 #    [YOU DO NOT NEED TO CHANGE THESE]
 #
-import sys,string, os, subprocess, signal,time
+import sys,string, os, subprocess32 as subprocess, signal,time
 #MYD = os.path.abspath(os.path.dirname(__file__))
 #mkpath = lambda *x: os.path.join(MYD, *x)
 #UPD = os.path.abspath(mkpath('..'))

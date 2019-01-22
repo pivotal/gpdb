@@ -2,7 +2,7 @@
 #
 # Copyright (c) Greenplum Inc 2010. All Rights Reserved. 
 
-import os, sys, re, tempfile, shutil, pickle, getpass, subprocess, time, glob, ConfigParser
+import os, sys, re, tempfile, shutil, pickle, getpass, subprocess32 as subprocess, time, glob, ConfigParser
 
 try:
     from optparse import Option, OptionParser 

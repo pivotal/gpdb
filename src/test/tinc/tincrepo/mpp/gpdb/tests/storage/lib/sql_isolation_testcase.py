@@ -19,7 +19,7 @@ from mpp.models import SQLTestCase
 import pygresql.pg
 from tinctest.lib import Gpdiff
 import os
-import subprocess
+import subprocess32 as subprocess
 import re
 import multiprocessing
 import time

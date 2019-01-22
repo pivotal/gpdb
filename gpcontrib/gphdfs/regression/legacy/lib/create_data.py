@@ -36,7 +36,7 @@ LAST MODIFIED:
 import sys
 import string
 import os
-import subprocess
+import subprocess32 as subprocess
 import signal
 import time
 import getopt

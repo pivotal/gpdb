@@ -19,7 +19,7 @@ import os
 import socket
 from time import sleep, time
 import unittest2 as unittest
-import subprocess
+import subprocess32 as subprocess
 
 import tinctest
 from tinctest.lib import local_path

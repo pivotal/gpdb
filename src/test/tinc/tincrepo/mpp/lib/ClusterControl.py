@@ -17,7 +17,7 @@ limitations under the License.
 ClusterControl - code for manipulating the state of GPDB individual cluster processes
 """
 
-import sys, os, subprocess, inspect, platform
+import sys, os, subprocess32 as subprocess, inspect, platform
 MYD = os.path.abspath( os.path.dirname( __file__ ) )
 mkpath = lambda * x: os.path.join( MYD, *x )
 UPD = os.path.abspath( mkpath( '..' ) )

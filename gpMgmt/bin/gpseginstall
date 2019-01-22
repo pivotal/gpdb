@@ -18,7 +18,7 @@ USAGE:   gpseginstall -f|--file HOSTFILE [-u|--user USER] [-g|--group GROUP] [-p
 '''
 
 import os, sys, re
-import subprocess, warnings, logging, tarfile
+import subprocess32 as subprocess, warnings, logging, tarfile
 warnings.simplefilter('ignore', DeprecationWarning)
 sys.path.append(sys.path[0] + '/lib')
 

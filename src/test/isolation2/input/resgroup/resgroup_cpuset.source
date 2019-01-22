@@ -16,7 +16,7 @@ CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 -- @param cpuset: cpu cores which the queries should only be run on them, e.g. 0,1
 -- @return bool: true/false indicating whether it corresponds to the rule
 CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$
-import subprocess
+import subprocess32 as subprocess
 import pygresql.pg as pg
 import time
 import re

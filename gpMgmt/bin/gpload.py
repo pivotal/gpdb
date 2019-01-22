@@ -49,7 +49,7 @@ except Exception, e:
     sys.exit(2)
 
 import hashlib
-import datetime,getpass,os,signal,socket,subprocess,threading,time,traceback,re
+import datetime,getpass,os,signal,socket,subprocess32 as subprocess,threading,time,traceback,re
 import uuid
 import socket
 

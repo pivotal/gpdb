@@ -9,7 +9,7 @@ create or replace language plpythonu;
 --
 create or replace function pg_ctl(datadir text, command text, command_mode text default 'immediate')
 returns text as $$
-    import subprocess
+    import subprocess32 as subprocess
     if command not in ('stop', 'restart'):
         return 'Invalid command input'
 
@@ -34,7 +34,7 @@ $$ language plpythonu;
 --
 create or replace function pg_ctl_start(datadir text, port int, contentid int, dbid int)
 returns text as $$
-    import subprocess
+    import subprocess32 as subprocess
     cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
     opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d' % (port, dbid, contentid)
     cmd = cmd + '-o "%s" start' % opts

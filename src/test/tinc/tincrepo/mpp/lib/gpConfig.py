@@ -25,7 +25,7 @@ GpConfig class is used to view, delete, update persistent GUCs.
 # Set up some globals, and import gptest
 #    [YOU DO NOT NEED TO CHANGE THESE]
 ############################################################################
-import sys, os, subprocess, inspect
+import sys, os, subprocess32 as subprocess, inspect
 MYD = os.path.abspath( os.path.dirname( __file__ ) )
 mkpath = lambda * x: os.path.join( MYD, *x )
 UPD = os.path.abspath( mkpath( '..' ) )
@@ -34,7 +34,7 @@ if UPD not in sys.path:
 
 import pprint
 import re
-import subprocess
+import subprocess32 as subprocess
 try:
     from tinctest.main import TINCException
     from gppylib.commands.base import Command 

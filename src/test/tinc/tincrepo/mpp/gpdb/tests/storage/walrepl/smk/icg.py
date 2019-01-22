@@ -26,7 +26,7 @@ from mpp.gpdb.tests.storage.walrepl.lib.standby import Standby
 
 
 import os
-import subprocess
+import subprocess32 as subprocess
 import socket
 import time
 import shutil

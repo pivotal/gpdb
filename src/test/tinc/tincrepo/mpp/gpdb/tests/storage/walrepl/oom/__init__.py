@@ -16,7 +16,7 @@ limitations under the License.
 """
 
 import os
-import subprocess
+import subprocess32 as subprocess
 import socket
 from time import sleep
 import tinctest

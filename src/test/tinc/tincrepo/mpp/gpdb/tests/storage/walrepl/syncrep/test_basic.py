@@ -32,7 +32,7 @@ import os
 import re
 import select
 import signal
-import subprocess
+import subprocess32 as subprocess
 import time
 import sys
 

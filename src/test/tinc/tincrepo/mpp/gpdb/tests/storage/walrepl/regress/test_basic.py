@@ -28,7 +28,7 @@ import mpp.gpdb.tests.storage.walrepl.run
 
 import os
 import re
-import subprocess
+import subprocess32 as subprocess
 import socket
 import time
 import shutil

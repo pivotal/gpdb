@@ -4,7 +4,7 @@ import optparse
 import os
 import shutil
 import stat
-import subprocess
+import subprocess32 as subprocess
 import sys
 
 from builds.GpBuild import GpBuild

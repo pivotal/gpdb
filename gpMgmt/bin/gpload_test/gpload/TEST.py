@@ -10,7 +10,7 @@ import socket
 import fileinput
 import platform
 import re
-import subprocess
+import subprocess32 as subprocess
 from pygresql import pg
 
 """
