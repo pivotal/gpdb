@@ -20,7 +20,10 @@ import fcntl
 import os
 import select
 import time
-import subprocess32 as subprocess
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 from gppylib import gplog
 
 

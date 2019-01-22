@@ -21,7 +21,7 @@ from threading import Thread
 
 import os
 import signal
-import subprocess32 as subprocess
+import subprocess
 import sys
 import time
 

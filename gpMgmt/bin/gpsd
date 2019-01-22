@@ -3,7 +3,7 @@
 
 
 import datetime
-import subprocess32 as subprocess
+import subprocess
 import os
 import platform
 import sys

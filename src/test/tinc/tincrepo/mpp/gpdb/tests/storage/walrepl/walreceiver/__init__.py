@@ -21,7 +21,7 @@ from mpp.gpdb.tests.storage.walrepl import lib as walrepl
 from mpp.gpdb.tests.storage.walrepl.lib.pqwrap import *
 from mpp.gpdb.tests.storage.walrepl.lib.pg_util import GpUtility
 
-import subprocess32 as subprocess
+import subprocess
 import os
 
 gputil = GpUtility()

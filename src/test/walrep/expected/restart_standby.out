@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION restart_standby(opts text)
 RETURNS void
 EXECUTE ON MASTER AS
 $func$
-   import subprocess32 as subprocess
+   import subprocess
 
    cmd = 'gpinitstandby ' + opts
    subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')

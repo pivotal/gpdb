@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import subprocess32 as subprocess
+import subprocess
 import sys
 import os
 

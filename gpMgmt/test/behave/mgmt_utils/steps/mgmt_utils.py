@@ -13,7 +13,7 @@ import tarfile
 import tempfile
 import thread
 import json
-import subprocess32 as subprocess
+import subprocess
 import commands
 import signal
 from collections import defaultdict

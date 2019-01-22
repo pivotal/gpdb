@@ -92,7 +92,7 @@ create language plpythonu;
 
 CREATE OR REPLACE FUNCTION wait_for_trigger_fault(dbname text, fault text, segno int)
 RETURNS bool as $$
-    import subprocess32 as subprocess 
+    import subprocess 
     import time
     cmd = 'psql %s -c "select gp_inject_fault(\'%s\', \'status\', %d)"' % (dbname, fault, segno)
     for i in range(100):

@@ -13,7 +13,7 @@ CREATE
 -- @param grp: the resource group queries running in
 -- @param cpuset: cpu cores which the queries should only be run on them, e.g. 0,1
 -- @return bool: true/false indicating whether it corresponds to the rule
-CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$ import subprocess32 as subprocess import pygresql.pg as pg import time import re 
+CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$ import subprocess import pygresql.pg as pg import time import re 
 conn = pg.connect(dbname="isolation2resgrouptest") pt = re.compile(r'con(\d+)') 
 def check(expect_cpus, sess_ids): procs = subprocess.check_output(['ps', '-eF']).split('\n') head, proc_stats = procs[0], procs[1:] PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0] cpus = [proc_stat.split()[PSR].strip() for proc_stat in proc_stats if 'postgres' in proc_stat and pt.findall(proc_stat) and set(pt.findall(proc_stat)).issubset(sess_ids)] return set(cpus).issubset(set(expect_cpus)) 
 def get_all_sess_ids_in_group(group_name): sql = "select sess_id from pg_stat_activity where rsgname = '%s'" % group_name result = conn.query(sql).getresult() return set([str(r[0]) for r in result]) 

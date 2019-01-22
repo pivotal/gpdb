@@ -22,7 +22,7 @@ from mpp.models import SQLTestCase
 import mpp.gpdb.tests.storage.walrepl.lib
 from mpp.gpdb.tests.storage.walrepl.run import StandbyRunMixin
 
-import subprocess32 as subprocess
+import subprocess
 
 class SQLwithStandby(StandbyRunMixin, SQLTestCase):
     """

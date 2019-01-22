@@ -2,7 +2,7 @@
 
 import argparse
 import os
-import subprocess32 as subprocess
+import subprocess
 import sys
 
 BASE_DIR = os.getcwd()

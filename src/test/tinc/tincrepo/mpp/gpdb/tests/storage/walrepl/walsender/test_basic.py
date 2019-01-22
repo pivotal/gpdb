@@ -24,7 +24,7 @@ from mpp.gpdb.tests.storage.walrepl import lib as walrepl
 from mpp.gpdb.tests.storage.walrepl.lib.walcomm import *
 from mpp.gpdb.tests.storage.walrepl.lib import PgControlData
 
-import subprocess32 as subprocess
+import subprocess
 
 class simple(MPPTestCase):
 

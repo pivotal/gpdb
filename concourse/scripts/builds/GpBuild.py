@@ -1,4 +1,4 @@
-import subprocess32 as subprocess
+import subprocess
 from GpdbBuildBase import GpdbBuildBase
 
 INSTALL_DIR="/usr/local/gpdb"

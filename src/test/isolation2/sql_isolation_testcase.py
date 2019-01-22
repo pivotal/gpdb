@@ -17,7 +17,7 @@ limitations under the License.
 
 import pygresql.pg
 import os
-import subprocess32 as subprocess
+import subprocess
 import re
 import multiprocessing
 import tempfile

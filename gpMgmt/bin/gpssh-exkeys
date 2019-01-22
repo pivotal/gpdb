@@ -48,7 +48,7 @@ try:
     import paramiko
     import getopt, time, getpass, logging
     import tempfile, filecmp
-    import array, socket, subprocess32 as subprocess
+    import array, socket, subprocess
     from gppylib.commands import unix
     from gppylib.util import ssh_utils
     from gppylib.gpparseopts import OptParser

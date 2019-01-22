@@ -4,7 +4,7 @@ import logging
 import optparse
 import os
 import re
-import subprocess32 as subprocess
+import subprocess
 import sys
 
 import special

@@ -23,7 +23,7 @@ import mpp.gpdb.tests.storage.walrepl.lib
 
 import os
 import shutil
-import subprocess32 as subprocess
+import subprocess
 import signal
 
 class Standby(object):

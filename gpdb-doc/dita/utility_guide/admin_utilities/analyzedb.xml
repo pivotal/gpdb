@@ -257,7 +257,7 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
         <codeblock>CREATE OR REPLACE FUNCTION analyzedb(params TEXT)
   RETURNS VOID AS
 $BODY$
-    import subprocess32 as subprocess
+    import subprocess
     cmd = ['analyzedb', '-a' ] + params.split()
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 

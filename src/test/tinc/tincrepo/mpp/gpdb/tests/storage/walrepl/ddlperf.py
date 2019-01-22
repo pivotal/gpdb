@@ -20,7 +20,7 @@ import multiprocessing
 import optparse
 import os
 import string
-import subprocess32 as subprocess
+import subprocess
 import sys
 import datetime
 

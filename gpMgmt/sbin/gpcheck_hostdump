@@ -6,7 +6,7 @@ USAGE:   gpcheck_hostdump [--appliance] [--linux] [--solaris]
          where --solaris will do a dump of a generic solaris server 
 '''
 
-import os, sys, re, tempfile, subprocess32 as subprocess, pickle, glob, stat, time
+import os, sys, re, tempfile, subprocess, pickle, glob, stat, time
 
 try:
     from optparse import Option, OptionParser 

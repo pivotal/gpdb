@@ -18,7 +18,7 @@ limitations under the License.
 """
 
 import shutil
-import subprocess32 as subprocess
+import subprocess
 import sys
 
 from mpp.gpdb.tests.storage.walrepl.lib.standby import Standby

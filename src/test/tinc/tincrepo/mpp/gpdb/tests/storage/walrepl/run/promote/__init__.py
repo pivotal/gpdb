@@ -38,7 +38,7 @@ import os
 import re
 import shutil
 import socket
-import subprocess32 as subprocess
+import subprocess
 
 pgutil = GpUtility()
 pgutil.check_and_start_gpdb()

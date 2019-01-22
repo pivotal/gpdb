@@ -29,7 +29,7 @@ import argparse
 import datetime
 import os
 import re
-import subprocess32 as subprocess
+import subprocess
 import yaml
 
 from jinja2 import Environment, FileSystemLoader

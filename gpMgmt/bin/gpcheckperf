@@ -37,7 +37,7 @@ import sys
 
 sys.path.append(sys.path[0] + '/lib')
 try:
-    import getopt, math, StringIO, stat, subprocess32 as subprocess, signal
+    import getopt, math, StringIO, stat, subprocess, signal
     from gppylib.gpparseopts import OptParser
     from gppylib.util import ssh_utils
 except ImportError, e:

@@ -25,7 +25,7 @@ import os
 import sys
 import re
 import random
-import subprocess32 as subprocess
+import subprocess
 import time
 import logging
 from optparse import OptionParser
