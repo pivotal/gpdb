@@ -30,7 +30,7 @@ CREATE OR REPLACE FUNCTION adjust_memory_limit(nsegs bigint) RETURNS int AS $$
     total = swap + mem * overcommit / 100.
 
     limit = (2 << 30) * 1.0 * nsegs / 3 / total
-    return os.system('gpconfig -c gp_resource_group_memory_limit -v {:f}'.format(limit))
+    return os.system('gpconfig -c gp_resource_group_memory_limit -v {0:f}'.format(limit))
 $$ LANGUAGE plpythonu VOLATILE;
 
 SELECT adjust_memory_limit(count(hostname)) FROM gp_segment_configuration
