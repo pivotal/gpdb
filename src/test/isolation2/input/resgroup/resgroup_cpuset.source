@@ -16,7 +16,7 @@ CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 -- @param cpuset: cpu cores which the queries should only be run on them, e.g. 0,1
 -- @return bool: true/false indicating whether it corresponds to the rule
 CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$
-import subprocess
+import subprocess32 as subprocess
 import pygresql.pg as pg
 import time
 import re
@@ -24,16 +24,8 @@ import re
 conn = pg.connect(dbname="isolation2resgrouptest")
 pt = re.compile(r'con(\d+)')
 
-def check_output(*popenargs, **kwargs):
-	process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-	output, unused_err = process.communicate()
-	retcode = process.poll()
-	if retcode:
-		raise subprocess.CalledProcessError(retcode, process.args, output=output)
-	return output
-
 def check(expect_cpus, sess_ids):
-	procs = check_output(['ps', '-eF']).split('\n')
+	procs = subprocess.check_output(['ps', '-eF']).split('\n')
 	head, proc_stats = procs[0], procs[1:]
 	PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0]
 	cpus = [proc_stat.split()[PSR].strip()

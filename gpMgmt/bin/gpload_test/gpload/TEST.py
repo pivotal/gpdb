@@ -398,7 +398,7 @@ class GPLoad_Env_TestCase(unittest.TestCase):
 
         result = isFileEqual(f1, f2, optionalFlags, outputPath=outputPath)
         diff = None if result else read_diff(ifile, outputPath)
-        self.assertTrue(result, "query resulted in diff:\n{}".format(diff))
+        self.assertTrue(result, "query resulted in diff:\n{0}".format(diff))
 
         return True
 

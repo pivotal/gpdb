@@ -4,7 +4,7 @@ create language plpythonu;
 
 create or replace function pg_ctl(datadir text, command text, port int, contentid int)
 returns text as $$
-    import subprocess
+    import subprocess32 as subprocess
 
     cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
     if command in ('stop', 'restart'):
@@ -22,7 +22,7 @@ $$ language plpythonu;
 
 create or replace function move_xlog(source text, dest text)
 returns text as $$
-	import subprocess
+	import subprocess32 as subprocess
 
 	cmd = 'mkdir -p %s; ' % dest
 	cmd = cmd + 'mv %s/0* %s' % (source, dest)

@@ -32,6 +32,9 @@ function gen_env(){
 		source /opt/gcc_env.sh
 		cd "\${1}/gpdb_src"
 		source gpAux/gpdemo/gpdemo-env.sh
+		# TODO: find a better way to make subprocess32 available to tests
+		make -C gpMgmt/bin subprocess32
+		export PYTHONPATH="$(pwd)/gpMgmt/bin/ext:${PYTHONPATH}"
 		make -s ${MAKE_TEST_COMMAND}
 	EOF
 

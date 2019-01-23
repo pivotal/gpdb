@@ -377,7 +377,7 @@ class SQLIsolationExecutor(object):
                 if sql.startswith('\\'):
                     mode, sql = sql.split(None, 1)
                     if mode != '\\retcode':
-                        raise Exception('Invalid execution mode: {}'.format(mode))
+                        raise Exception('Invalid execution mode: {0}'.format(mode))
 
                 cmd_output = subprocess.Popen(sql.strip(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
                 stdout, _ = cmd_output.communicate()
@@ -387,7 +387,7 @@ class SQLIsolationExecutor(object):
                 print >> output_file, stdout
                 if mode == '\\retcode':
                     print >> output_file, '-- end_ignore'
-                    print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
+                    print >> output_file, '(exited with code {0})'.format(cmd_output.returncode)
             elif sql.startswith('include:'):
                 helper_file = parse_include_statement(sql)
 

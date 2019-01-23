@@ -68,6 +68,10 @@ run_resgroup_test() {
             --disable-gpcloud --disable-gpfdist --disable-orca \
             --disable-pxf ${CONFIGURE_FLAGS}
 
+        # TODO: find a better way to make subprocess32 available to tests
+        make -C gpMgmt/bin subprocess32
+        export PYTHONPATH="$(pwd)/gpMgmt/bin/ext:${PYTHONPATH}"
+
         make -C /home/gpadmin/gpdb_src/src/test/regress
         ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/regress </dev/null
         ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/isolation2 </dev/null
