@@ -13,13 +13,14 @@ CREATE
 -- @param grp: the resource group queries running in
 -- @param cpuset: cpu cores which the queries should only be run on them, e.g. 0,1
 -- @return bool: true/false indicating whether it corresponds to the rule
-CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$ import subprocess import pygresql.pg as pg import time import re 
-conn = pg.connect(dbname="isolation2resgrouptest") pt = re.compile(r'con(\d+)') 
-def check(expect_cpus, sess_ids): procs = subprocess.check_output(['ps', '-eF']).split('\n') head, proc_stats = procs[0], procs[1:] PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0] cpus = [proc_stat.split()[PSR].strip() for proc_stat in proc_stats if 'postgres' in proc_stat and pt.findall(proc_stat) and set(pt.findall(proc_stat)).issubset(sess_ids)] return set(cpus).issubset(set(expect_cpus)) 
-def get_all_sess_ids_in_group(group_name): sql = "select sess_id from pg_stat_activity where rsgname = '%s'" % group_name result = conn.query(sql).getresult() return set([str(r[0]) for r in result]) 
-expect_cpu = [] conf = cpuset if conf == '': fd = open("@cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus") line = fd.readline() fd.close() conf = line.strip('\n') 
-tokens = conf.split(",") for token in tokens: if token.find('-') != -1: interval = token.split("-") num1 = interval[0] num2 = interval[1] for num in range(int(num1), int(num2) + 1): expect_cpu.append(str(num)) else: expect_cpu.append(token) sess_ids = get_all_sess_ids_in_group(grp) 
-for i in xrange(1000): time.sleep(0.01) if not check(expect_cpu, sess_ids): return False 
+CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$ import subprocess import pygresql.pg as pg import time import re
+conn = pg.connect(dbname="isolation2resgrouptest") pt = re.compile(r'con(\d+)')
+def check_output(*popenargs, **kwargs): process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs) output, unused_err = process.communicate() retcode = process.poll() if retcode: raise subprocess.CalledProcessError(retcode, process.args, output=output) return output
+def check(expect_cpus, sess_ids): procs = check_output(['ps', '-eF']).split('\n') head, proc_stats = procs[0], procs[1:] PSR = [id for id, attr in enumerate(head.split()) if attr.strip() == 'PSR'][0] cpus = [proc_stat.split()[PSR].strip() for proc_stat in proc_stats if 'postgres' in proc_stat and pt.findall(proc_stat) and set(pt.findall(proc_stat)).issubset(sess_ids)] return set(cpus).issubset(set(expect_cpus))
+def get_all_sess_ids_in_group(group_name): sql = "select sess_id from pg_stat_activity where rsgname = '%s'" % group_name result = conn.query(sql).getresult() return set([str(r[0]) for r in result])
+expect_cpu = [] conf = cpuset if conf == '': fd = open("/cgroup/cpuset/gpdb/cpuset.cpus") line = fd.readline() fd.close() conf = line.strip('\n')
+tokens = conf.split(",") for token in tokens: if token.find('-') != -1: interval = token.split("-") num1 = interval[0] num2 = interval[1] for num in range(int(num1), int(num2) + 1): expect_cpu.append(str(num)) else: expect_cpu.append(token) sess_ids = get_all_sess_ids_in_group(grp)
+for i in xrange(1000): time.sleep(0.01) if not check(expect_cpu, sess_ids): return False
 return True $$ LANGUAGE plpythonu;
 CREATE
 
