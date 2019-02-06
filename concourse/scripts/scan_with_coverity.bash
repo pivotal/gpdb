@@ -15,7 +15,10 @@ function prep_env_for_centos() {
   ln -sf /usr/bin/xsubpp /usr/share/perl5/ExtUtils/xsubpp
   source /opt/gcc_env.sh
 
-  ln -sf "$BASE_DIR"/gpdb_src/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
+  mkdir -p "$(pwd)/gpdb_src/gpAux/ext"
+  tar xf python-tarball/python-*.tar.gz -C "$(pwd)/gpdb_src/gpAux/ext"
+
+  ln -sf "$(pwd)/gpdb_src/gpAux/ext/${BLD_ARCH}/python-2.7.12" /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 

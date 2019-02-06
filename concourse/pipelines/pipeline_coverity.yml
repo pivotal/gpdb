@@ -40,6 +40,13 @@ resources:
     json_key: ((gcs-key))
     regexp: centos7/libquicklz-devel-(\d.*)\.el7\.x86_64\.rpm
 
+- name: python-centos7
+  type: gcs
+  source:
+    bucket: gp-internal-artifacts
+    json_key: ((gcs-key))
+    versioned_file: centos7/python-2.7.12.tar.gz
+
 jobs:
 
 - name: coverity_scan
@@ -53,6 +60,8 @@ jobs:
       resource: libquicklz-centos7
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos7
+    - get: python-tarball
+      resource: python-centos7
   - task: scan_with_coverity
     file: gpdb_src/concourse/tasks/scan_with_coverity.yml
     image: centos-coverity
