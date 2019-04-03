@@ -15,21 +15,21 @@ main() {
 
   pushd "$INTERMEDIATE_PLACE"
     echo "Move files listed in $ABS_QAUTILS_FILES"
-    while read file; do
+    while read -r file; do
       if [ -f "$file" ]; then
-	TARGET_QAUTILS_DIR="$QAUTILS_DIR"/`dirname $file`
-	echo "Moving $file to directory $TARGET_QAUTILS_DIR"
-	mkdir -p "$TARGET_QAUTILS_DIR"
-	mv "$file" "$TARGET_QAUTILS_DIR"
+        TARGET_QAUTILS_DIR="$QAUTILS_DIR/$(dirname "$file")"
+        echo "Moving $file to directory $TARGET_QAUTILS_DIR"
+        mkdir -p "$TARGET_QAUTILS_DIR"
+        mv "$file" "$TARGET_QAUTILS_DIR"
       else
-	echo "File $file does not exists, skipping moving it"
+        echo "File $file does not exist, skipping moving it"
       fi
     done < "$ABS_QAUTILS_FILES"
-    tar czf "$ABS_PATH_OUTPUT_TARBALL" *
+    tar czf "$ABS_PATH_OUTPUT_TARBALL" -- *
   popd
 
   pushd "$QAUTILS_DIR"
-    tar czf "$ABS_PATH_QAUTILS_TARBALL" *
+    tar czf "$ABS_PATH_QAUTILS_TARBALL" -- *
   popd
 }
 
