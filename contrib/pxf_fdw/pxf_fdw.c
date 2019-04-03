@@ -1,6 +1,6 @@
 /*
  * pxf_fdw.c
- *		  Foreign-data wrapper for the Pivotal Extension Framework (PXF)
+ *		  Foreign-data wrapper for the Platform Extension Framework (PXF)
  *
  * IDENTIFICATION
  *		  contrib/pxf_fdw/pxf_fdw.c
@@ -256,35 +256,41 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 Datum
 pxf_fdw_validator(PG_FUNCTION_ARGS)
 {
-//	List     *options_list  = untransformRelOptions(PG_GETARG_DATUM(0));
-	Oid  catalog   = PG_GETARG_OID(1);
+	List     *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
+	Oid      catalog       = PG_GETARG_OID(1);
+	ListCell *cell;
 	char *protocol = NULL;
-//	List     *other_options = NIL;
-//	ListCell *cell;
+	List     *other_options = NIL;
 //
-//	/*
-//	 * Check that only options supported by pxf_fdw, and allowed for the
-//	 * current object type, are given.
-//	 */
-//	foreach(cell, options_list)
-//	{
-//		DefElem *def = (DefElem *) lfirst(cell);
-//
-//		/*
-//		 * Separate out protocol and column-specific options
-//		 */
-//		if (strcmp(def->defname, SERVER_OPTION_PROTOCOL) == 0)
-//		{
-//			if (protocol)
-//				ereport(ERROR,
-//				        (errcode(ERRCODE_SYNTAX_ERROR),
-//					        errmsg(
-//						        "conflicting or redundant options. Protocol option should only be defined once")));
-//			protocol = defGetString(def);
-//		}
-//		else
-//			other_options = lappend(other_options, def);
-//	}
+	/*
+	 * Check that only options supported by pxf_fdw, and allowed for the
+	 * current object type, are given.
+	 */
+	foreach(cell, options_list)
+	{
+		DefElem *def = (DefElem *) lfirst(cell);
+
+		/*
+		 * Separate out protocol and column-specific options
+		 */
+		if (strcmp(def->defname, SERVER_OPTION_PROTOCOL) == 0)
+		{
+			if (catalog == ForeignTableRelationId)
+				ereport(ERROR,
+				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+					        errmsg(
+						        "invalid foreign table option. The 'protocol' option cannot be defined for PXF foreign tables")));
+
+			if (protocol)
+				ereport(ERROR,
+				        (errcode(ERRCODE_SYNTAX_ERROR),
+					        errmsg(
+						        "conflicting or redundant options. Protocol option should only be defined once")));
+			protocol = defGetString(def);
+		}
+		else
+			other_options = lappend(other_options, def);
+	}
 //
 //	/*
 //	 * protocol option is required for pxf_fdw foreign tables.
@@ -327,7 +333,7 @@ pxfGetForeignRelSize(PlannerInfo *root,
 
 	baserel->fdw_private = (void *) fdw_private;
 	// FIXME: populate with an estimate of the number of rows in the foreign table
-//	baserel->rows        = 0;
+	baserel->rows        = 0;
 }
 
 /*
@@ -886,12 +892,7 @@ pxfGetOptions(Oid foreigntableid,
 	                   *prev;
 
 	/*
-	 * Extract options from FDW objects.  We ignore user mappings because
-	 * file_fdw doesn't have any options that can be specified there.
-	 *
-	 * (XXX Actually, given the current contents of valid_options[], there's
-	 * no point in examining anything except the foreign table's own options.
-	 * Simplify?)
+	 * Extract options from FDW objects.
 	 */
 	table   = GetForeignTable(foreigntableid);
 	server  = GetForeignServer(table->serverid);
@@ -923,17 +924,17 @@ pxfGetOptions(Oid foreigntableid,
 		if (strcmp(def->defname, SERVER_OPTION_PROTOCOL) == 0)
 		{
 			*protocol = defGetString(def);
-			options = list_delete_cell(options, lc, prev);
+//			options = list_delete_cell(options, lc, prev);
 		}
 		else if (strcmp(def->defname, SERVER_OPTION_LOCATION) == 0)
 		{
 			*location = defGetString(def);
-			options = list_delete_cell(options, lc, prev);
+//			options = list_delete_cell(options, lc, prev);
 		}
 		else if (strcmp(def->defname, "fs.s3a.awsAccessKeyId") == 0 ||
 			strcmp(def->defname, "fs.s3a.awsSecretAccessKey") == 0)
 		{
-			options = list_delete_cell(options, lc, prev);
+//			options = list_delete_cell(options, lc, prev);
 		}
 		else
 		{
@@ -977,7 +978,7 @@ initCopyState(PxfFdwExecutionState *estate, Relation relation)
 	     uri->uri,
 	     uri->profile);
 
-	get_fragments(uri, relation, NULL);
+	get_fragments(uri, relation, NULL, NULL, NIL);
 
 	/* set context */
 	gphadoop_context *context = palloc0(sizeof(gphadoop_context));

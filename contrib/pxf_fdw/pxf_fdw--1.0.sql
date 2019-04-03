@@ -5,25 +5,23 @@
 
 -- create wrapper with handler
 CREATE OR REPLACE FUNCTION pxf_fdw_handler()
-RETURNS fdw_handler
+    RETURNS fdw_handler
 AS 'pxf_fdw'
-LANGUAGE C STRICT;
+    LANGUAGE C STRICT;
 
 CREATE FUNCTION pxf_fdw_validator(text[], oid)
-RETURNS void
+    RETURNS void
 AS 'MODULE_PATHNAME'
-LANGUAGE C STRICT;
+    LANGUAGE C STRICT;
 
 CREATE FOREIGN DATA WRAPPER pxf_fdw
-VALIDATOR pxf_fdw_validator
-HANDLER pxf_fdw_handler;
+  VALIDATOR pxf_fdw_validator
+  HANDLER pxf_fdw_handler;
 
+
+-- Would it be a good idea to provide predefined FDWs
+-- to users for specific protocols, such as the S3 one?
 -- CREATE FOREIGN DATA WRAPPER pxf_s3_fdw
 -- VALIDATOR pxf_fdw_validator
 -- HANDLER pxf_fdw_handler
 -- OPTIONS (protocol 's3');
-
--- CREATE FUNCTION file_fdw_validator(text[], oid)
--- RETURNS void
--- AS 'MODULE_PATHNAME'
--- LANGUAGE C STRICT;

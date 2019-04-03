@@ -1,29 +1,34 @@
-CREATE extension pxf_fdw;
-CREATE SERVER
-amazon_s3
-FOREIGN DATA WRAPPER pxf_fdw
-OPTIONS (protocol 's3');
+-- start_matchsubs
+--
+-- # create a match/subs expression
+--
+-- m/ERROR:.*invalid foreign table option\. The \'protocol\' option cannot be defined for PXF foreign tables.*/
+-- s/ERROR:.*invalid foreign table option\. The \'protocol\' option cannot be defined for PXF foreign tables.*/ERROR:  invalid foreign table option. The 'protocol' option cannot be defined for PXF foreign tables/
+--
+-- end_matchsubs
 
-CREATE USER MAPPING FOR public 
-SERVER amazon_s3;
+CREATE EXTENSION IF NOT EXISTS pxf_fdw;
 
-CREATE FOREIGN TABLE stats(
-  dvalue date,
-  email varchar,
-  hour interval,
-  login_time interval,
-  logout_time interval,
-  available_time interval
+CREATE SERVER demo
+FOREIGN DATA WRAPPER pxf_fdw;
+
+-- Foreign table creation fails if `protocol` option is provided
+CREATE FOREIGN TABLE invalid_protocol_option(
+  login_time interval
 )
-SERVER amazon_s3
+SERVER demo
 OPTIONS (
-  hostname 's3.amazonaws.com',
-  bucketname 'reports',
-  filename 'hourly.csv',
-  format 'csv',
-  delimiter E',',
-  quote E'"',
-  header 'true'
+  protocol 'hdfs'
 );
 
-select * from stats;
+CREATE FOREIGN TABLE pxf_foreign_table(
+  login_time interval
+)
+SERVER demo;
+
+-- Altering a foreign table fails if `protocol` option is added
+ALTER FOREIGN TABLE pxf_foreign_table
+    OPTIONS (ADD protocol 'hdfs');
+
+DROP FOREIGN TABLE pxf_foreign_table;
+DROP SERVER demo;

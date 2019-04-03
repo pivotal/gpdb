@@ -26,15 +26,21 @@
 #include "libchurl.h"
 #include "pxfuriparser.h"
 
+#include "nodes/execnodes.h"
+#include "nodes/nodeFuncs.h"
+#include "utils/rel.h"
+
 /*
  * Contains the data necessary to build the HTTP headers required for calling on the pxf service
  */
 typedef struct sPxfInputData
 {
-	CHURL_HEADERS headers;
-	GPHDUri    *gphduri;
-	Relation	rel;
-	char *filterstr;
+	CHURL_HEADERS  headers;
+	GPHDUri        *gphduri;
+	Relation       rel;
+	char           *filterstr;
+	ProjectionInfo *proj_info;
+	List           *quals;
 } PxfInputData;
 
 /*

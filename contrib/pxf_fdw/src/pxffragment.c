@@ -27,8 +27,13 @@ static void pxf_array_element_end(void *state, bool isnull);
  * Returns selected fragments that have been allocated to the current segment
  */
 void
-get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
+get_fragments(GPHDUri *uri,
+              Relation relation,
+              char *filter_string,
+              ProjectionInfo *proj_info,
+              List *quals)
 {
+
 	List	   *data_fragments;
 
 	/* Context for the Fragmenter API */
@@ -45,10 +50,12 @@ get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 	/*
 	 * Enrich the curl HTTP header
 	 */
-	inputData.headers = client_context.http_headers;
-	inputData.gphduri = uri;
-	inputData.rel = relation;
+	inputData.headers   = client_context.http_headers;
+	inputData.gphduri   = uri;
+	inputData.rel       = relation;
 	inputData.filterstr = filter_string;
+	inputData.proj_info = proj_info;
+	inputData.quals     = quals;
 	build_http_headers(&inputData);
 
 	/*
@@ -371,11 +378,12 @@ filter_fragments_for_segment(List *list)
 
 	int			index = 0;
 	int			frag_index = 1;
-	int32		shift = xid % getgpsegmentCount();
+	int			numsegments = getgpsegmentCount();
+	int32		shift = xid % numsegments;
 
 	for (current = list_head(list); current != NULL; index++)
 	{
-		if (GpIdentity.segindex == (index + shift) % getgpsegmentCount())
+		if (GpIdentity.segindex == (index + shift) % numsegments)
 		{
 			/*
 			 * current segment is the one that should process, keep the
@@ -522,7 +530,7 @@ process_request(ClientContext *client_context, char *uri)
 	if (client_context->handle == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_CONNECTION_FAILURE),
-				 errmsg("Unsuccessful connection to uri: \"%s\"", uri)));
+				 errmsg("unsuccessful connection to uri: \"%s\"", uri)));
 	memset(buffer, 0, RAW_BUF_SIZE);
 	resetStringInfo(&(client_context->the_rest_buf));
 

@@ -1,7 +1,7 @@
 EXTENSION    = pxf_fdw
 EXTVERSION   = 1.0
 MODULE_big   = pxf_fdw
-OBJS         = src/pxfbridge.o src/pxfheaders.o src/pxffragment.o src/pxfuriparser.o src/pxfutils.o src/libchurl.o pxf_fdw.o
+OBJS         = src/pxfbridge.o src/pxfheaders.o src/pxffragment.o src/pxfuriparser.o src/pxfutils.o src/pxffilters.o src/libchurl.o pxf_fdw.o
 DOCS         = $(wildcard *.md)
 
 BUILD_DIR = $(shell pwd)
@@ -23,10 +23,10 @@ $(EXTENSION)--$(EXTVERSION).sql : $(EXTENSION).sql
 	@cp $< $@
 
 DATA_built = $(EXTENSION)--$(EXTVERSION).sql
-# DATA= $(EXTENSION).sql
+DATA = pxf_fdw--1.0.sql
 PG_CONFIG ?= pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
-REGRESS      = pxf_fdw_test4
+REGRESS      = pxf_fdw_test pxf_fdw_test4
 
 ifdef USE_PGXS
 	include $(PGXS)
