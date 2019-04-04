@@ -14,6 +14,7 @@
 #include "nodes/makefuncs.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_foreign_table.h"
+#include "catalog/pg_user_mapping.h"
 #include "catalog/pg_type.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
@@ -256,10 +257,10 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 Datum
 pxf_fdw_validator(PG_FUNCTION_ARGS)
 {
-	List     *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
-	Oid      catalog       = PG_GETARG_OID(1);
+	List     *options_list  = untransformRelOptions(PG_GETARG_DATUM(0));
+	Oid      catalog        = PG_GETARG_OID(1);
 	ListCell *cell;
-	char *protocol = NULL;
+	char     *protocol      = NULL;
 	List     *other_options = NIL;
 //
 	/*
@@ -281,11 +282,12 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 					        errmsg(
 						        "invalid foreign table option. The 'protocol' option cannot be defined for PXF foreign tables")));
 
-			if (protocol)
+			if (catalog == UserMappingRelationId)
 				ereport(ERROR,
-				        (errcode(ERRCODE_SYNTAX_ERROR),
+				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
 					        errmsg(
-						        "conflicting or redundant options. Protocol option should only be defined once")));
+						        "invalid user mapping option. The 'protocol' option cannot be defined for PXF user mappings")));
+
 			protocol = defGetString(def);
 		}
 		else
@@ -379,7 +381,8 @@ pxfGetForeignPlan(PlannerInfo *root,
 	Index scan_relid = baserel->relid;
 	List  *options   = NIL;
 
-	options = lappend(options, makeString("passing this value to all segments"));
+	options =
+		lappend(options, makeString("passing this value to all segments"));
 
 //	options = list_make1(makeDefElem("format", (Node *) makeString("csv")));
 //	DefElem *def = (DefElem *) linitial(options);
@@ -889,6 +892,7 @@ pxfGetOptions(Oid foreigntableid,
 	ForeignDataWrapper *wrapper;
 	List               *options;
 	ListCell           *lc,
+	                   *next,
 	                   *prev;
 
 	/*
@@ -914,32 +918,35 @@ pxfGetOptions(Oid foreigntableid,
 	 * Separate out the protocol/location.
 	 */
 	*protocol = NULL;
+	lc   = list_head(options);
 	prev = NULL;
-	foreach(lc, options)
+	while (lc != NULL)
 	{
-		DefElem *def = (DefElem *) (lc)->data.ptr_value;
+		next = lnext(lc);
+		DefElem *def = (DefElem *) lfirst(lc);
 
 		elog(DEBUG2, "PXF_FWD: pxfGetOptions Found option %s", def->defname);
 
 		if (strcmp(def->defname, SERVER_OPTION_PROTOCOL) == 0)
 		{
 			*protocol = defGetString(def);
-//			options = list_delete_cell(options, lc, prev);
+			options = list_delete_cell(options, lc, prev);
 		}
 		else if (strcmp(def->defname, SERVER_OPTION_LOCATION) == 0)
 		{
 			*location = defGetString(def);
-//			options = list_delete_cell(options, lc, prev);
+			options = list_delete_cell(options, lc, prev);
 		}
 		else if (strcmp(def->defname, "fs.s3a.awsAccessKeyId") == 0 ||
 			strcmp(def->defname, "fs.s3a.awsSecretAccessKey") == 0)
 		{
-//			options = list_delete_cell(options, lc, prev);
+			options = list_delete_cell(options, lc, prev);
 		}
 		else
 		{
 			prev = lc;
 		}
+		lc           = next;
 	}
 
 	/*
