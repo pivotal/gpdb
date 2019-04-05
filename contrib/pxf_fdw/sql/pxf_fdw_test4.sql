@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pxf_fdw;
 
 CREATE SERVER demoserver
     FOREIGN DATA WRAPPER pxf_fdw
-    OPTIONS (protocol 'demo');
+    OPTIONS (protocol 'demo', mpp_execute 'all segments' );
 
 -- fails because of redundant option
 CREATE SERVER redundant_option

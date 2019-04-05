@@ -15,14 +15,14 @@ CREATE SERVER demo
 -- Foreign table creation fails if `protocol` option is provided
 CREATE FOREIGN TABLE invalid_protocol_option( login_time interval )
     SERVER demo
-    OPTIONS ( protocol 'hdfs' );
+    OPTIONS ( protocol 'hdfs', mpp_execute 'all segments' );
 
 CREATE ROLE pxf_fdw_user;
 
 -- User mapping creation fails if `protocol` option is provided
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER demo
-    OPTIONS ( protocol 'hdfs' );
+    OPTIONS ( protocol 'hdfs', mpp_execute 'all segments' );
 
 -- Succeeds when protocol is not provided
 CREATE USER MAPPING FOR pxf_fdw_user

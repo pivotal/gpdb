@@ -12,14 +12,14 @@ CREATE SERVER demo
 -- Foreign table creation fails if `protocol` option is provided
 CREATE FOREIGN TABLE invalid_protocol_option( login_time interval )
     SERVER demo
-    OPTIONS ( protocol 'hdfs' );
+    OPTIONS ( protocol 'hdfs', mpp_execute 'all segments' );
 ERROR:  invalid foreign table option. The 'protocol' option cannot be defined for PXF foreign tables
 CREATE ROLE pxf_fdw_user;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- User mapping creation fails if `protocol` option is provided
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER demo
-    OPTIONS ( protocol 'hdfs' );
+    OPTIONS ( protocol 'hdfs', mpp_execute 'all segments' );
 ERROR:  invalid user mapping option. The 'protocol' option cannot be defined for PXF user mappings
 -- Succeeds when protocol is not provided
 CREATE USER MAPPING FOR pxf_fdw_user
