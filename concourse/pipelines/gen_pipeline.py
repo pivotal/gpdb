@@ -251,7 +251,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos6'],
-        choices=['centos6', 'centos7', 'sles', 'win'],
+        choices=['centos6', 'centos7', 'sles', 'ubuntu18.04', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
