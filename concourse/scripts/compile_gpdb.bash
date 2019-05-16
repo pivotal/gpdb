@@ -121,8 +121,8 @@ function include_quicklz() {
 }
 
 function include_libstdcxx() {
-  pushd /opt/gcc-6*/lib64
-    if [ "${TARGET_OS}" == "centos" ] ; then
+  if [ "${TARGET_OS}" == "centos" ] ; then
+    pushd /opt/gcc-6*/lib64
       for libfile in libstdc++.so.*; do
         case $libfile in
           *.py)
@@ -132,8 +132,9 @@ function include_libstdcxx() {
             ;; # vendor everything else
         esac
       done
-    fi
-  popd
+    popd
+  fi
+
 }
 
 function export_gpdb() {
@@ -206,6 +207,11 @@ function _main() {
     sles)
       prep_env_for_sles
       link_tools_for_sles
+      ;;
+    ubuntu)
+      BLD_ARCH=ubuntu1804_amd64
+      build_xerces
+      build_and_test_orca
       ;;
     win32)
         export BLD_ARCH=win32
