@@ -1000,13 +1000,25 @@ jobs:
         - get: libquicklz-installer
           resource: libquicklz-ubuntu18.04
     - task: sync_tools
-      file: gpdb_src/concourse/tasks/sync_tools.yml
-      image: gpdb6-ubuntu18.04-build
-      params:
-        TARGET_OS: ubuntu
-        TARGET_OS_VERSION: "18.04"
-        TASK_OS: ubuntu
-        TASK_OS_VERSION: "18.04"
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: alpine
+            tag: latest
+        run:
+          path: sh
+          args:
+            - -ec
+            - |
+              mkdir gpAux_ext/ext
+              wget -q -O - https://github.com/greenplum-db/gporca/archive/v3.42.0.tar.gz | \
+                  tar zxf - --strip-components=1 -C orca_src
+        outputs:
+        - name: orca_src
+        # hack to make compile_gpdb happy since it needs gpAux_ext
+        - name: gpAux_ext
     - task: compile_gpdb
       image: gpdb6-ubuntu18.04-build
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
