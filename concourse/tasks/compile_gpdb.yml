@@ -6,8 +6,11 @@ inputs:
   - name: gpAux_ext
   - name: libquicklz-installer
   - name: libquicklz-devel-installer
+    optional: true
   - name: libsigar-installer
+    optional: true
   - name: python-tarball
+    optional: true
   - name: orca_src
 outputs:
   - name: gpdb_artifacts
