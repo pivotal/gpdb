@@ -194,7 +194,7 @@ function build_and_test_orca()
 
 function _main() {
   # Copy input ext dir; assuming ext doesnt exist
-  mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
+  cp -a gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
 
   case "${TARGET_OS}" in
     centos)
@@ -218,7 +218,7 @@ function _main() {
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-pxf"
         ;;
     *)
-        echo "only centos, sles and win32 are supported TARGET_OS'es"
+        echo "only centos, sles, ubuntu, and win32 are supported TARGET_OS'es"
         false
         ;;
   esac
