@@ -55,9 +55,9 @@ function _main() {
         exit 1
     fi
 
-    if [ "$TEST_OS" != "centos" -a "$TEST_OS" != "sles" ]; then
+    if [ "$TEST_OS" != "centos" -a "$TEST_OS" != "sles" -a "$TEST_OS" != "ubuntu" ]; then
         echo "FATAL: TEST_OS is set to an invalid value: $TEST_OS"
-	echo "Configure TEST_OS to be centos or sles"
+        echo "Configure TEST_OS to be centos, sles, or ubuntu"
         exit 1
     fi
 
