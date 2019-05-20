@@ -31,6 +31,10 @@ function install_deps_for_centos() {
   tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
 
+function install_deps_for_ubuntu() {
+  dpkg --install libquicklz-installer/libquicklz-*.deb
+}
+
 function link_tools_for_centos() {
   tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
   ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
@@ -104,19 +108,35 @@ function unittest_check_gpdb() {
 
 function include_zstd() {
   pushd ${GREENPLUM_INSTALL_DIR}
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig
-      cp /usr/lib64/libzstd.so* lib
-      cp /usr/include/zstd*.h include
-    fi
+    case "${TARGET_OS}" in
+      centos)
+        cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig
+        cp /usr/lib64/libzstd.so* lib
+        cp /usr/include/zstd*.h include
+        ;;
+      ubuntu)
+        cp /usr/lib/pkgconfig/libzstd.pc lib/pkgconfig
+        cp /usr/lib/libzstd.so* lib
+        cp /usr/include/zstd*.h include
+        ;;
+    esac
   popd
 }
 
 function include_quicklz() {
   pushd ${GREENPLUM_INSTALL_DIR}
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/libquicklz.so* lib
-    fi
+    case "${TARGET_OS}" in
+      centos)
+        cp /usr/lib64/libquicklz.so* lib
+        ;;
+      ubuntu)
+        cp /usr/local/lib/libquicklz.so* lib
+        ;;
+      *)
+        printf "Unknown TARGET_OS: %s\n" "${TARGET_OS}"
+        exit 1
+        ;;
+    esac
   popd
 }
 
@@ -212,6 +232,7 @@ function _main() {
       BLD_ARCH=ubuntu1804_amd64
       build_xerces
       build_and_test_orca
+      install_deps_for_ubuntu
       ;;
     win32)
         export BLD_ARCH=win32
