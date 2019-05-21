@@ -306,7 +306,7 @@ def main():
     args = parser.parse_args()
 
     if args.pipeline_type == 'prod':
-        args.os_types = ['centos6', 'centos7', 'sles', 'win']
+        args.os_types = ['centos6', 'centos7', 'sles', 'ubuntu18.04', 'win']
         args.test_sections = [
             'ICW',
             'Replication',
