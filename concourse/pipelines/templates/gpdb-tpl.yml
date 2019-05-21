@@ -2046,6 +2046,7 @@ jobs:
       - compile_gpdb_centos6
       - compile_gpdb_open_source_centos6
       - compile_gpdb_centos7
+      - compile_gpdb_ubuntu18.04
  ##     - compile_gpdb_sles11
       - icw_planner_centos6
       - icw_gporca_centos6
@@ -2122,7 +2123,7 @@ jobs:
       - compile_gpdb_ubuntu18.04
       - icw_gporca_ubuntu18.04
       - icw_planner_ubuntu18.04
-    - get: bin_gpdb_ubuntu18.04
+    - get: bin_gpdb_clients_ubuntu18.04
       passed:
       - compile_gpdb_ubuntu18.04
 
@@ -2190,12 +2191,18 @@ jobs:
     - put: bin_gpdb_centos7_rc
       params:
         file: "bin_gpdb_centos_gcs/server-rc-*rhel7*.tar.gz"
+    - put: bin_gpdb_ubuntu18.04_rc
+      params:
+        file: "bin_gpdb_centos_gcs/server-rc-*ubuntu18.04*.tar.gz"
     - put: bin_gpdb_clients_centos6_rc
       params:
         file: "bin_gpdb_centos_gcs/clients-rc-*rhel6*.tar.gz"
     - put: bin_gpdb_clients_centos7_rc
       params:
         file: "bin_gpdb_centos_gcs/clients-rc-*rhel7*.tar.gz"
+    - put: bin_gpdb_clients_ubuntu18.04_rc
+      params:
+        file: "bin_gpdb_centos_gcs/clients-rc-*ubuntu18.04*.tar.gz"
     - put: bin_gpdb_centos6_rc_s3
       params:
         file: bin_gpdb_centos6/bin_gpdb.tar.gz
