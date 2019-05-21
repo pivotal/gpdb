@@ -132,10 +132,6 @@ function include_quicklz() {
       ubuntu)
         cp /usr/local/lib/libquicklz.so* lib
         ;;
-      *)
-        printf "Unknown TARGET_OS: %s\n" "${TARGET_OS}"
-        exit 1
-        ;;
     esac
   popd
 }
