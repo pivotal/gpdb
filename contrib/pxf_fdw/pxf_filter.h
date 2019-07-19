@@ -145,7 +145,7 @@ pxfoperand_is_list_const(PxfOperand x)
 	return (x.opcode == PXF_LIST_CONST_CODE);
 }
 
-char	   *serializePxfFilterQuals(List *quals);
+char	   *SerializePxfFilterQuals(List *quals);
 List	   *extractPxfAttributes(List *quals, bool *qualsAreSupported);
 
 #endif							/* // _PXF_FILTERS_H_ */
