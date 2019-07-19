@@ -9,8 +9,9 @@
 #include "postgres.h"
 
 #include "pxf_fdw.h"
-#include "pxf_fragment.h"
 #include "pxf_bridge.h"
+#include "pxf_filter.h"
+#include "pxf_fragment.h"
 
 #include "access/sysattr.h"
 #include "access/reloptions.h"
@@ -283,6 +284,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
+	char	   *filterStr = NULL;
 	List	   *quals = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
 	ProjectionInfo *proj_info = node->ss.ps.ps_ProjInfo;
@@ -292,6 +294,8 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 
 	options = PxfGetOptions(foreigntableid);
 
+	filterStr = SerializePxfFilterQuals(quals);
+
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
 	 * BeginCopyFrom() again.
@@ -299,16 +303,16 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	pxfsstate = (PxfFdwScanState *) palloc(sizeof(PxfFdwScanState));
 	initStringInfo(&pxfsstate->uri);
 
+	pxfsstate->filterStr = filterStr;
 	pxfsstate->options = options;
 	pxfsstate->proj_info = proj_info;
 	pxfsstate->quals = quals;
 	pxfsstate->fragments = GetFragmentList(pxfsstate->options,
 										   relation,
-										   NULL,
+										   filterStr,
 										   pxfsstate->proj_info,
 										   pxfsstate->quals);
 	pxfsstate->relation = relation;
-	pxfsstate->filterstr = NULL;
 
 	InitCopyState(pxfsstate);
 	node->fdw_state = (void *) pxfsstate;
