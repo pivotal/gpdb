@@ -43,11 +43,11 @@ PxfBridgeCleanup(PxfFdwModifyState * pxfmstate)
 	churl_headers_cleanup(pxfmstate->churl_headers);
 	pxfmstate->churl_headers = NULL;
 
-	/* TODO: do we need to cleanup filterstr for foreign scan? */
-/*	if (pxfmstate->filterstr != NULL)
+	/* TODO: do we need to cleanup filterStr for foreign scan? */
+/*	if (pxfmstate->filterStr != NULL)
 	{
-		pfree(pxfmstate->filterstr);
-		pxfmstate->filterstr = NULL;
+		pfree(pxfmstate->filterStr);
+		pxfmstate->filterStr = NULL;
 	}*/
 }
 
@@ -67,7 +67,7 @@ PxfBridgeImportStart(PxfFdwScanState * pxfsstate)
 	BuildHttpHeaders(pxfsstate->churl_headers,
 					 pxfsstate->options,
 					 pxfsstate->relation,
-					 NULL,
+					 pxfsstate->filterStr,
 					 pxfsstate->proj_info,
 					 pxfsstate->quals);
 	SetCurrentFragmentHeaders(pxfsstate);
