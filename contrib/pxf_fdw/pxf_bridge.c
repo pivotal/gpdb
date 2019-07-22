@@ -23,16 +23,16 @@
 #include "cdb/cdbvars.h"
 
 /* helper function declarations */
-static void BuildUriForRead(PxfFdwScanState * pxfsstate);
-static void BuildUriForWrite(PxfFdwModifyState * pxfmstate);
-static void SetCurrentFragmentHeaders(PxfFdwScanState * pxfsstate);
-static size_t FillBuffer(PxfFdwScanState * pxfsstate, char *start, size_t size);
+static void BuildUriForRead(PxfFdwScanState *pxfsstate);
+static void BuildUriForWrite(PxfFdwModifyState *pxfmstate);
+static void SetCurrentFragmentHeaders(PxfFdwScanState *pxfsstate);
+static size_t FillBuffer(PxfFdwScanState *pxfsstate, char *start, size_t size);
 
 /*
  * Clean up churl related data structures from the PXF FDW modify state.
  */
 void
-PxfBridgeCleanup(PxfFdwModifyState * pxfmstate)
+PxfBridgeCleanup(PxfFdwModifyState *pxfmstate)
 {
 	if (pxfmstate == NULL)
 		return;
@@ -43,11 +43,11 @@ PxfBridgeCleanup(PxfFdwModifyState * pxfmstate)
 	churl_headers_cleanup(pxfmstate->churl_headers);
 	pxfmstate->churl_headers = NULL;
 
-	/* TODO: do we need to cleanup filterStr for foreign scan? */
-/*	if (pxfmstate->filterStr != NULL)
+	/* TODO: do we need to cleanup filter_str for foreign scan? */
+/*	if (pxfmstate->filter_str != NULL)
 	{
-		pfree(pxfmstate->filterStr);
-		pxfmstate->filterStr = NULL;
+		pfree(pxfmstate->filter_str);
+		pxfmstate->filter_str = NULL;
 	}*/
 }
 
@@ -55,7 +55,7 @@ PxfBridgeCleanup(PxfFdwModifyState * pxfmstate)
  * Sets up data before starting import
  */
 void
-PxfBridgeImportStart(PxfFdwScanState * pxfsstate)
+PxfBridgeImportStart(PxfFdwScanState *pxfsstate)
 {
 	if (!pxfsstate->fragments)
 		return;
@@ -67,9 +67,8 @@ PxfBridgeImportStart(PxfFdwScanState * pxfsstate)
 	BuildHttpHeaders(pxfsstate->churl_headers,
 					 pxfsstate->options,
 					 pxfsstate->relation,
-					 pxfsstate->filterStr,
-					 pxfsstate->proj_info,
-					 pxfsstate->quals);
+					 pxfsstate->filter_str,
+					 pxfsstate->retrieved_attrs);
 	SetCurrentFragmentHeaders(pxfsstate);
 
 	pxfsstate->churl_handle = churl_init_download(pxfsstate->uri.data, pxfsstate->churl_headers);
@@ -82,14 +81,13 @@ PxfBridgeImportStart(PxfFdwScanState * pxfsstate)
  * Sets up data before starting export
  */
 void
-PxfBridgeExportStart(PxfFdwModifyState * pxfmstate)
+PxfBridgeExportStart(PxfFdwModifyState *pxfmstate)
 {
 	BuildUriForWrite(pxfmstate);
 	pxfmstate->churl_headers = churl_headers_init();
 	BuildHttpHeaders(pxfmstate->churl_headers,
 					 pxfmstate->options,
 					 pxfmstate->relation,
-					 NULL,
 					 NULL,
 					 NULL);
 	pxfmstate->churl_handle = churl_init_upload(pxfmstate->uri.data, pxfmstate->churl_headers);
@@ -134,7 +132,7 @@ PxfBridgeRead(void *outbuf, int datasize, void *extra)
  * Writes data from the given buffer of a given size to the PXF server
  */
 int
-PxfBridgeWrite(PxfFdwModifyState * pxfmstate, char *databuf, int datalen)
+PxfBridgeWrite(PxfFdwModifyState *pxfmstate, char *databuf, int datalen)
 {
 	size_t		n = 0;
 
@@ -151,7 +149,7 @@ PxfBridgeWrite(PxfFdwModifyState * pxfmstate, char *databuf, int datalen)
  * Format the URI for reading by adding PXF service endpoint details
  */
 static void
-BuildUriForRead(PxfFdwScanState * pxfsstate)
+BuildUriForRead(PxfFdwScanState *pxfsstate)
 {
 	FragmentData *data = (FragmentData *) lfirst(pxfsstate->current_fragment);
 
@@ -164,7 +162,7 @@ BuildUriForRead(PxfFdwScanState * pxfsstate)
  * Format the URI for writing by adding PXF service endpoint details
  */
 static void
-BuildUriForWrite(PxfFdwModifyState * pxfmstate)
+BuildUriForWrite(PxfFdwModifyState *pxfmstate)
 {
 	PxfOptions *options = pxfmstate->options;
 
@@ -184,7 +182,7 @@ BuildUriForWrite(PxfFdwModifyState * pxfmstate)
  * If the fragment doesn't have user data, the header will be removed.
  */
 static void
-SetCurrentFragmentHeaders(PxfFdwScanState * pxfsstate)
+SetCurrentFragmentHeaders(PxfFdwScanState *pxfsstate)
 {
 	FragmentData *frag_data = (FragmentData *) lfirst(pxfsstate->current_fragment);
 	int			fragment_count = list_length(pxfsstate->fragments);
@@ -224,7 +222,7 @@ SetCurrentFragmentHeaders(PxfFdwScanState * pxfsstate)
  * Read data from churl until the buffer is full or there is no more data to be read
  */
 static size_t
-FillBuffer(PxfFdwScanState * pxfsstate, char *start, size_t size)
+FillBuffer(PxfFdwScanState *pxfsstate, char *start, size_t size)
 {
 	size_t		n = 0;
 	char	   *ptr = start;

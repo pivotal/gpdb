@@ -59,7 +59,7 @@ typedef struct FragmentData
 	char	   *user_data;
 	char	   *profile;
 	int			fragment_idx;
-}			FragmentData;
+} FragmentData;
 
 /*
  * One debug level for all log messages from the data allocation algorithm
@@ -69,11 +69,14 @@ typedef struct FragmentData
 /*
  * Gets the fragments for the given uri location
  */
-extern List *GetFragmentList(PxfOptions * options, Relation relation, char *filter_string, ProjectionInfo *proj_info, List *quals);
+extern List *GetFragmentList(PxfOptions *options,
+							 Relation relation,
+							 char *filter_string,
+							 List *retrieved_attrs);
 
 /*
  * Frees the given fragment
  */
-extern void free_fragment(FragmentData * data);
+extern void free_fragment(FragmentData *data);
 
 #endif							/* GPDB_PXFFRAGMENT_H */

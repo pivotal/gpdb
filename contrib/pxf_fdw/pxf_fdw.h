@@ -51,9 +51,12 @@ typedef struct PxfOptions
 	List	   *options;		/* merged options, excluding COPY, protocol,
 								 * resource, format, wire_format, pxf_port,
 								 * pxf_host, and pxf_protocol */
-}			PxfOptions;
+} PxfOptions;
 
 /* Functions prototypes for pxf_option.c file */
 PxfOptions *PxfGetOptions(Oid foreigntableid);
+
+/* in pxf_deparse.c */
+extern void deparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs);
 
 #endif							/* _PXF_FDW_H_ */
