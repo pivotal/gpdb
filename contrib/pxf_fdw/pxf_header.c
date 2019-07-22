@@ -32,8 +32,7 @@
 static void AddAlignmentSizeHttpHeader(CHURL_HEADERS headers);
 static void AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel);
 static void AddOptionsToHttpHeader(CHURL_HEADERS headers, List *options);
-static void AddProjectionDescHttpHeader(CHURL_HEADERS headers, ProjectionInfo *projInfo, List *qualsAttributes);
-static bool AddAttNumsFromTargetList(Node *node, List *attnums);
+static void AddProjectionDescHttpHeader(CHURL_HEADERS headers, List *retrieved_attrs);
 static void AddProjectionIndexHeader(CHURL_HEADERS headers, int attno, char *long_number);
 static char *NormalizeKeyName(const char *key);
 static char *TypeOidGetTypename(Oid typid);
@@ -45,11 +44,10 @@ static char *TypeOidGetTypename(Oid typid);
  */
 void
 BuildHttpHeaders(CHURL_HEADERS headers,
-				 PxfOptions * options,
+				 PxfOptions *options,
 				 Relation relation,
 				 char *filter_string,
-				 ProjectionInfo *proj_info,
-				 List *quals)
+				 List *retrieved_attrs)
 {
 	extvar_t	ev;
 	char		pxfPortString[sizeof(int32) * 8];
@@ -60,30 +58,10 @@ BuildHttpHeaders(CHURL_HEADERS headers,
 		AddTupleDescriptionToHttpHeader(headers, relation);
 	}
 
-	if (proj_info != NULL)
+	if (retrieved_attrs != NULL)
 	{
-		bool		qualsAreSupported = true;
-		List	   *qualsAttributes =
-		extractPxfAttributes(quals, &qualsAreSupported);
-
-		/*
-		 * projection information is incomplete if columns from WHERE clause
-		 * wasn't extracted
-		 */
-
-		/*
-		 * if any of expressions in WHERE clause is not supported - do not
-		 * send any projection information at all
-		 */
-		if (qualsAreSupported &&
-			(qualsAttributes != NIL || list_length(quals) == 0))
-		{
-			AddProjectionDescHttpHeader(headers, proj_info, qualsAttributes);
-		}
-		else
-		{
-			elog(DEBUG2, "query will not be optimized to use projection information");
-		}
+		/* add the list of attrs to the projection desc http headers */
+		AddProjectionDescHttpHeader(headers, retrieved_attrs);
 	}
 
 	/* GP cluster configuration */
@@ -281,79 +259,25 @@ AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel)
  * Report projection description to the remote component
  */
 static void
-AddProjectionDescHttpHeader(CHURL_HEADERS headers,
-							ProjectionInfo *projInfo,
-							List *qualsAttributes)
+AddProjectionDescHttpHeader(CHURL_HEADERS headers, List *retrieved_attrs)
 {
-	int			i;
-	int			number;
-	int			numberTargetList;
+	ListCell   *lc1 = NULL;
 	char		long_number[sizeof(int32) * 8];
-	int		   *varNumbers = projInfo->pi_varNumbers;
-	StringInfoData formatter;
 
-	initStringInfo(&formatter);
-	numberTargetList = 0;
-
-	/*
-	 * Non-simpleVars are added to the targetlist we use
-	 * expression_tree_walker to access attrno information we do it through a
-	 * helper function AddAttNumsFromTargetList
-	 */
-	if (projInfo->pi_targetlist)
+	foreach(lc1, retrieved_attrs)
 	{
-		List	   *l = lappend_int(NIL, 0);
-		ListCell   *lc1;
+		int			attno = lfirst_int(lc1);
 
-		foreach(lc1, projInfo->pi_targetlist)
-		{
-			GenericExprState *gstate = (GenericExprState *) lfirst(lc1);
-
-			AddAttNumsFromTargetList((Node *) gstate->arg->expr, l);
-		}
-
-		foreach(lc1, l)
-		{
-			int			attno = lfirst_int(lc1);
-
-			if (attno > InvalidAttrNumber)
-			{
-				AddProjectionIndexHeader(headers, attno - 1, long_number);
-				numberTargetList++;
-			}
-		}
-
-		list_free(l);
+		/* zero-based index in the server side */
+		AddProjectionIndexHeader(headers, attno - 1, long_number);
 	}
 
-	number = numberTargetList + projInfo->pi_numSimpleVars +
-		list_length(qualsAttributes);
-	if (number == 0)
+	if (retrieved_attrs->length == 0)
 		return;
 
 	/* Convert the number of projection columns to a string */
-	pg_ltoa(number, long_number);
+	pg_ltoa(retrieved_attrs->length, long_number);
 	churl_headers_append(headers, "X-GP-ATTRS-PROJ", long_number);
-
-	for (i = 0; i < projInfo->pi_numSimpleVars; i++)
-	{
-		AddProjectionIndexHeader(headers, varNumbers[i] - 1, long_number);
-	}
-
-	ListCell   *attribute = NULL;
-
-	/*
-	 * AttrNumbers coming from quals
-	 */
-	foreach(attribute, qualsAttributes)
-	{
-		AttrNumber	attrNumber = (AttrNumber) lfirst_int(attribute);
-
-		AddProjectionIndexHeader(headers, attrNumber, long_number);
-	}
-
-	list_free(qualsAttributes);
-	pfree(formatter.data);
 }
 
 /*
@@ -384,39 +308,6 @@ AddOptionsToHttpHeader(CHURL_HEADERS headers, List *options)
 		churl_headers_append(headers, x_gp_key, defGetString(def));
 		pfree(x_gp_key);
 	}
-}
-
-/*
- * Gets a list of attnums from the given Node
- * it uses expression_tree_walker to recursively
- * get the list
- */
-static bool
-AddAttNumsFromTargetList(Node *node, List *attnums)
-{
-	if (node == NULL)
-		return false;
-	if (IsA(node, Var))
-	{
-		Var		   *variable = (Var *) node;
-		AttrNumber	attnum = variable->varattno;
-
-		lappend_int(attnums, attnum);
-		return false;
-	}
-
-	/*
-	 * Don't examine the arguments or filters of Aggrefs or WindowFuncs,
-	 * because those do not represent expressions to be evaluated within the
-	 * overall targetlist's econtext.
-	 */
-	if (IsA(node, Aggref))
-		return false;
-	if (IsA(node, WindowFunc))
-		return false;
-	return expression_tree_walker(node,
-								  AddAttNumsFromTargetList,
-								  (void *) attnums);
 }
 
 /*
