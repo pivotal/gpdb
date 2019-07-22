@@ -33,19 +33,19 @@
 /*
  * internal buffer for libchurl internal context
  */
-typedef struct
+typedef struct churl_buffer
 {
 	char	   *ptr;
 	int			max;
 	int			bot,
 				top;
 
-}			churl_buffer;
+} churl_buffer;
 
 /*
  * internal context of libchurl
  */
-typedef struct
+typedef struct churl_handle
 {
 	/* curl easy API handle */
 	CURL	   *curl_handle;
@@ -79,43 +79,43 @@ typedef struct
 
 	/* true on upload, false on download */
 	bool		upload;
-}			churl_context;
+} churl_context;
 
 /*
  * holds http header properties
  */
-typedef struct
+typedef struct churl_settings
 {
 	struct curl_slist *headers;
-}			churl_settings;
+} churl_settings;
 
 
 churl_context *churl_new_context(void);
-void		create_curl_handle(churl_context * context);
-void		set_curl_option(churl_context * context, CURLoption option, const void *data);
+void		create_curl_handle(churl_context *context);
+void		set_curl_option(churl_context *context, CURLoption option, const void *data);
 size_t		read_callback(void *ptr, size_t size, size_t nmemb, void *userdata);
-void		setup_multi_handle(churl_context * context);
-void		multi_perform(churl_context * context);
-bool		internal_buffer_large_enough(churl_buffer * buffer, size_t required);
-void		flush_internal_buffer(churl_context * context);
+void		setup_multi_handle(churl_context *context);
+void		multi_perform(churl_context *context);
+bool		internal_buffer_large_enough(churl_buffer *buffer, size_t required);
+void		flush_internal_buffer(churl_context *context);
 char	   *get_dest_address(CURL * curl_handle);
-void		enlarge_internal_buffer(churl_buffer * buffer, size_t required);
-void		finish_upload(churl_context * context);
-void		cleanup_curl_handle(churl_context * context);
-void		multi_remove_handle(churl_context * context);
-void		cleanup_internal_buffer(churl_buffer * buffer);
-void		churl_cleanup_context(churl_context * context);
+void		enlarge_internal_buffer(churl_buffer *buffer, size_t required);
+void		finish_upload(churl_context *context);
+void		cleanup_curl_handle(churl_context *context);
+void		multi_remove_handle(churl_context *context);
+void		cleanup_internal_buffer(churl_buffer *buffer);
+void		churl_cleanup_context(churl_context *context);
 size_t		write_callback(char *buffer, size_t size, size_t nitems, void *userp);
-void		fill_internal_buffer(churl_context * context, int want);
-void		churl_headers_set(churl_context * context, CHURL_HEADERS settings);
-void		check_response_status(churl_context * context);
-void		check_response_code(churl_context * context);
-void		check_response(churl_context * context);
-void		clear_error_buffer(churl_context * context);
+void		fill_internal_buffer(churl_context *context, int want);
+void		churl_headers_set(churl_context *context, CHURL_HEADERS settings);
+void		check_response_status(churl_context *context);
+void		check_response_code(churl_context *context);
+void		check_response(churl_context *context);
+void		clear_error_buffer(churl_context *context);
 size_t		header_callback(char *buffer, size_t size, size_t nitems, void *userp);
-void		free_http_response(churl_context * context);
-void		compact_internal_buffer(churl_buffer * buffer);
-void		realloc_internal_buffer(churl_buffer * buffer, size_t required);
+void		free_http_response(churl_context *context);
+void		compact_internal_buffer(churl_buffer *buffer);
+void		realloc_internal_buffer(churl_buffer *buffer, size_t required);
 bool		handle_special_error(long response, StringInfo err);
 char	   *get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer);
 char	   *build_header_str(const char *format, const char *key, const char *value);
@@ -504,7 +504,7 @@ churl_new_context()
 }
 
 void
-clear_error_buffer(churl_context * context)
+clear_error_buffer(churl_context *context)
 {
 	if (!context)
 		return;
@@ -512,7 +512,7 @@ clear_error_buffer(churl_context * context)
 }
 
 void
-create_curl_handle(churl_context * context)
+create_curl_handle(churl_context *context)
 {
 	context->curl_handle = curl_easy_init();
 	if (!context->curl_handle)
@@ -520,7 +520,7 @@ create_curl_handle(churl_context * context)
 }
 
 void
-set_curl_option(churl_context * context, CURLoption option, const void *data)
+set_curl_option(churl_context *context, CURLoption option, const void *data)
 {
 	int			curl_error;
 
@@ -552,7 +552,7 @@ read_callback(void *ptr, size_t size, size_t nmemb, void *userdata)
  * Setups the libcurl multi API
  */
 void
-setup_multi_handle(churl_context * context)
+setup_multi_handle(churl_context *context)
 {
 	int			curl_error;
 
@@ -578,7 +578,7 @@ setup_multi_handle(churl_context * context)
  * callbacks are called.
  */
 void
-multi_perform(churl_context * context)
+multi_perform(churl_context *context)
 {
 	int			curl_error;
 
@@ -591,13 +591,13 @@ multi_perform(churl_context * context)
 }
 
 bool
-internal_buffer_large_enough(churl_buffer * buffer, size_t required)
+internal_buffer_large_enough(churl_buffer *buffer, size_t required)
 {
 	return ((buffer->top + required) <= buffer->max);
 }
 
 void
-flush_internal_buffer(churl_context * context)
+flush_internal_buffer(churl_context *context)
 {
 	churl_buffer *context_buffer = context->upload_buffer;
 
@@ -645,7 +645,7 @@ get_dest_address(CURL * curl_handle)
 }
 
 void
-enlarge_internal_buffer(churl_buffer * buffer, size_t required)
+enlarge_internal_buffer(churl_buffer *buffer, size_t required)
 {
 	if (buffer->ptr != NULL)
 		pfree(buffer->ptr);
@@ -659,7 +659,7 @@ enlarge_internal_buffer(churl_buffer * buffer, size_t required)
  * calling perform repeatedly
  */
 void
-finish_upload(churl_context * context)
+finish_upload(churl_context *context)
 {
 	if (!context->multi_handle)
 		return;
@@ -677,7 +677,7 @@ finish_upload(churl_context * context)
 }
 
 void
-cleanup_curl_handle(churl_context * context)
+cleanup_curl_handle(churl_context *context)
 {
 	if (!context->curl_handle)
 		return;
@@ -690,7 +690,7 @@ cleanup_curl_handle(churl_context * context)
 }
 
 void
-multi_remove_handle(churl_context * context)
+multi_remove_handle(churl_context *context)
 {
 	int			curl_error;
 
@@ -703,7 +703,7 @@ multi_remove_handle(churl_context * context)
 }
 
 void
-cleanup_internal_buffer(churl_buffer * buffer)
+cleanup_internal_buffer(churl_buffer *buffer)
 {
 	if ((buffer) && (buffer->ptr))
 	{
@@ -716,7 +716,7 @@ cleanup_internal_buffer(churl_buffer * buffer)
 }
 
 void
-churl_cleanup_context(churl_context * context)
+churl_cleanup_context(churl_context *context)
 {
 	if (context)
 	{
@@ -760,7 +760,7 @@ write_callback(char *buffer, size_t size, size_t nitems, void *userp)
  * returns when size reached or transfer ended
  */
 void
-fill_internal_buffer(churl_context * context, int want)
+fill_internal_buffer(churl_context *context, int want)
 {
 	fd_set		fdread;
 	fd_set		fdwrite;
@@ -817,7 +817,7 @@ fill_internal_buffer(churl_context * context, int want)
 }
 
 void
-churl_headers_set(churl_context * context, CHURL_HEADERS headers)
+churl_headers_set(churl_context *context, CHURL_HEADERS headers)
 {
 	churl_settings *settings = (churl_settings *) headers;
 
@@ -829,7 +829,7 @@ churl_headers_set(churl_context * context, CHURL_HEADERS headers)
  * with a valid response status and code.
  */
 void
-check_response(churl_context * context)
+check_response(churl_context *context)
 {
 	check_response_code(context);
 	check_response_status(context);
@@ -842,7 +842,7 @@ check_response(churl_context * context)
  * and so have an error status.
  */
 void
-check_response_status(churl_context * context)
+check_response_status(churl_context *context)
 {
 	CURLMsg    *msg;			/* for picking up messages with the transfer
 								 * status */
@@ -880,7 +880,7 @@ check_response_status(churl_context * context)
  * reports if different than 200 and 100
  */
 void
-check_response_code(churl_context * context)
+check_response_code(churl_context *context)
 {
 	long		response_code;
 	char	   *response_text = NULL;
@@ -1102,7 +1102,7 @@ get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer)
 }
 
 void
-free_http_response(churl_context * context)
+free_http_response(churl_context *context)
 {
 	if (!context->last_http_reponse)
 		return;
@@ -1134,7 +1134,7 @@ header_callback(char *buffer, size_t size, size_t nitems, void *userp)
 }
 
 void
-compact_internal_buffer(churl_buffer * buffer)
+compact_internal_buffer(churl_buffer *buffer)
 {
 	int			n;
 
@@ -1149,7 +1149,7 @@ compact_internal_buffer(churl_buffer * buffer)
 }
 
 void
-realloc_internal_buffer(churl_buffer * buffer, size_t required)
+realloc_internal_buffer(churl_buffer *buffer, size_t required)
 {
 	int			n;
 

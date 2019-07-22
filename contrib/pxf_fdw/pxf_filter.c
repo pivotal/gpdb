@@ -30,16 +30,16 @@
 #include "utils/lsyscache.h"
 
 static List *PxfMakeExpressionItemsList(List *quals, Node *parent);
-static void PxfFreeFilter(PxfFilterDesc * filter);
+static void PxfFreeFilter(PxfFilterDesc *filter);
 static char *PxfSerializeFilterList(List *filters);
-static bool OpExprToPxfFilter(OpExpr *expr, PxfFilterDesc * filter);
+static bool OpExprToPxfFilter(OpExpr *expr, PxfFilterDesc *filter);
 static bool
-			ScalarArrayOpExprToPxfFilter(ScalarArrayOpExpr *expr, PxfFilterDesc * filter);
-static bool VarToPxfFilter(Var *var, PxfFilterDesc * filter);
+			ScalarArrayOpExprToPxfFilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter);
+static bool VarToPxfFilter(Var *var, PxfFilterDesc *filter);
 static bool SupportedFilterType(Oid type);
-static bool SupportedOperatorTypeOpExpr(Oid type, PxfFilterDesc * filter);
+static bool SupportedOperatorTypeOpExpr(Oid type, PxfFilterDesc *filter);
 static bool SupportedOperatorTypeScalarArrayOpExpr(Oid type,
-												   PxfFilterDesc * filter,
+												   PxfFilterDesc *filter,
 												   bool useOr);
 static void ScalarConstToStr(Const *constval, StringInfo buf);
 static void ListConstToStr(Const *constval, StringInfo buf);
@@ -416,7 +416,7 @@ PxfMakeExpressionItemsList(List *quals, Node *parent)
 }
 
 static void
-PxfFreeFilter(PxfFilterDesc * filter)
+PxfFreeFilter(PxfFilterDesc *filter)
 {
 	if (!filter)
 		return;
@@ -508,7 +508,7 @@ PxfSerializeFilterList(List *filters)
 						 "PxfSerializeFilterList: node tag %d (T_Var)",
 						 tag);
 					PxfFilterDesc
-						* filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
+							   *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
 					Var		   *var = (Var *) node;
 
 					if (VarToPxfFilter(var, filter))
@@ -565,8 +565,8 @@ PxfSerializeFilterList(List *filters)
 						 "PxfSerializeFilterList: node tag %d (T_OpExpr)",
 						 tag);
 					PxfFilterDesc
-						* filter =
-						(PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
+							   *filter =
+					(PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
 					OpExpr	   *expr = (OpExpr *) node;
 
 					if (OpExprToPxfFilter(expr, filter))
@@ -774,7 +774,7 @@ PxfSerializeFilterList(List *filters)
 * if it is - create it and return a success code.
 */
 static bool
-OpExprToPxfFilter(OpExpr *expr, PxfFilterDesc * filter)
+OpExprToPxfFilter(OpExpr *expr, PxfFilterDesc *filter)
 {
 	Node	   *leftop = NULL;
 	Node	   *rightop = NULL;
@@ -854,7 +854,7 @@ OpExprToPxfFilter(OpExpr *expr, PxfFilterDesc * filter)
 }
 
 static bool
-ScalarArrayOpExprToPxfFilter(ScalarArrayOpExpr *expr, PxfFilterDesc * filter)
+ScalarArrayOpExprToPxfFilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter)
 {
 
 	Node	   *leftop = NULL;
@@ -918,7 +918,7 @@ ScalarArrayOpExprToPxfFilter(ScalarArrayOpExpr *expr, PxfFilterDesc * filter)
 }
 
 static bool
-VarToPxfFilter(Var *var, PxfFilterDesc * filter)
+VarToPxfFilter(Var *var, PxfFilterDesc *filter)
 {
 	Oid			var_type = InvalidOid;
 
@@ -1132,7 +1132,7 @@ SupportedFilterType(Oid type)
 }
 
 static bool
-SupportedOperatorTypeOpExpr(Oid type, PxfFilterDesc * filter)
+SupportedOperatorTypeOpExpr(Oid type, PxfFilterDesc *filter)
 {
 
 	int			nargs = sizeof(pxf_supported_opr_op_expr) / sizeof(dbop_pxfop_map);
@@ -1159,7 +1159,7 @@ SupportedOperatorTypeOpExpr(Oid type, PxfFilterDesc * filter)
 
 static bool
 SupportedOperatorTypeScalarArrayOpExpr(Oid type,
-									   PxfFilterDesc * filter,
+									   PxfFilterDesc *filter,
 									   bool useOr)
 {
 
@@ -1437,7 +1437,7 @@ AddExtraAndExpressionItems(List *expressionItems, int extraAndOperatorsNum)
 	}
 
 	ExpressionItem
-		* andExpressionItem = (ExpressionItem *) palloc0(sizeof(ExpressionItem));
+			   *andExpressionItem = (ExpressionItem *) palloc0(sizeof(ExpressionItem));
 
 	BoolExpr   *andExpr = makeNode(BoolExpr);
 

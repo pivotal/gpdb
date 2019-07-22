@@ -50,7 +50,7 @@ typedef enum PxfOperatorCode
 	PXFOP_IS_NOTNULL,
 	PXFOP_IN
 
-}			PxfOperatorCode;
+} PxfOperatorCode;
 
 /*
  * each supported operand from both sides of the operator is represented
@@ -84,7 +84,7 @@ typedef struct PxfOperand
 	Oid			consttype;		/* used when opcode is PXF_SCALAR_CONST_CODE
 								 * or PXF_LIST_CONST_CODE */
 
-}			PxfOperand;
+} PxfOperand;
 
 /*
  * A PXF filter has a left and right operands, and an operator.
@@ -95,7 +95,7 @@ typedef struct PxfFilterDesc
 	PxfOperand	r;				/* right operand or InvalidAttrNumber if none */
 	PxfOperatorCode op;			/* operator code */
 
-}			PxfFilterDesc;
+} PxfFilterDesc;
 
 /*
  * A mapping of GPDB operator OID to PXF operator code.
@@ -106,7 +106,7 @@ typedef struct dbop_pxfop_map
 	Oid			dbop;
 	PxfOperatorCode pxfop;
 
-}			dbop_pxfop_map;
+} dbop_pxfop_map;
 
 /*
  * A mapping of GPDB operator OID to PXF operator code ('PXFOP_IN').
@@ -118,14 +118,14 @@ typedef struct dbop_pxfop_array_map
 	PxfOperatorCode pxfop;
 	bool		useOr;
 
-}			dbop_pxfop_array_map;
+} dbop_pxfop_array_map;
 
 typedef struct ExpressionItem
 {
 	Node	   *node;
 	Node	   *parent;
 	bool		processed;
-}			ExpressionItem;
+} ExpressionItem;
 
 static inline bool
 pxfoperand_is_attr(PxfOperand x)

@@ -12,15 +12,15 @@
 
 #define LOG_DEBUG (FRAGDEBUG >= log_min_messages) || (FRAGDEBUG >= client_min_messages)
 
-static List *GetDataFragmentList(PxfOptions * options, ClientContext * client_context);
-static void rest_request(PxfOptions * options, ClientContext * client_context, char *rest_msg);
+static List *GetDataFragmentList(PxfOptions *options, ClientContext * client_context);
+static void rest_request(PxfOptions *options, ClientContext * client_context, char *rest_msg);
 static List *parse_get_fragments_response(List *fragments, StringInfo rest_buf);
 static List *FilterFragmentsForSegment(List *list);
 static void init(ClientContext * client_context);
 static void logFragmentList(const char *debugHeader, List *fragments);
 static void init_client_context(ClientContext * client_context);
-static void AssignPxfLocationToFragments(PxfOptions * options, List *fragments);
-static void call_rest(PxfOptions * options, ClientContext * client_context, char *rest_msg);
+static void AssignPxfLocationToFragments(PxfOptions *options, List *fragments);
+static void call_rest(PxfOptions *options, ClientContext * client_context, char *rest_msg);
 static void process_request(ClientContext * client_context, char *uri);
 static void pxf_fragment_scalar(void *state, char *token, JsonTokenType type);
 static void pxf_fragment_object_start(void *state, char *name, bool isnull);
@@ -31,11 +31,10 @@ static void pxf_array_element_end(void *state, bool isnull);
  * Returns selected fragments that have been allocated to the current segment
  */
 List *
-GetFragmentList(PxfOptions * options,
+GetFragmentList(PxfOptions *options,
 				Relation relation,
 				char *filter_string,
-				ProjectionInfo *proj_info,
-				List *quals)
+				List *retrieved_attrs)
 {
 	List	   *data_fragments;
 
@@ -52,8 +51,7 @@ GetFragmentList(PxfOptions * options,
 					 options,
 					 relation,
 					 filter_string,
-					 proj_info,
-					 quals);
+					 retrieved_attrs);
 
 	/*
 	 * Get the fragments data from the PXF service
@@ -90,7 +88,7 @@ GetFragmentList(PxfOptions * options,
  * Will use the same host as the existing segment as the PXF host.
  */
 static void
-AssignPxfLocationToFragments(PxfOptions * options, List *fragments)
+AssignPxfLocationToFragments(PxfOptions *options, List *fragments)
 {
 	ListCell   *frag_c = NULL;
 
@@ -111,7 +109,7 @@ AssignPxfLocationToFragments(PxfOptions * options, List *fragments)
  * 2. Process the returned list and create a list of DataFragment with it.
  */
 static List *
-GetDataFragmentList(PxfOptions * options,
+GetDataFragmentList(PxfOptions *options,
 					ClientContext * client_context)
 {
 	List	   *data_fragments = NIL;
@@ -131,7 +129,7 @@ GetDataFragmentList(PxfOptions * options,
  *       to failover with a retry for the HA HDFS scenario.
  */
 static void
-rest_request(PxfOptions * options, ClientContext * client_context, char *rest_msg)
+rest_request(PxfOptions *options, ClientContext * client_context, char *rest_msg)
 {
 	Assert(options->pxf_host != NULL && options->pxf_port > 0);
 
@@ -158,7 +156,7 @@ typedef enum pxf_fragment_object
 	PXF_PARSE_SOURCENAME,
 	PXF_PARSE_METADATA,
 	PXF_PARSE_REPLICAS
-}			pxf_fragment_object;
+} pxf_fragment_object;
 
 typedef struct FragmentState
 {
@@ -167,7 +165,7 @@ typedef struct FragmentState
 	List	   *fragments;
 	bool		has_replicas;
 	int			arraydepth;
-}			FragmentState;
+} FragmentState;
 
 static void
 pxf_fragment_object_start(void *state, char *name, bool isnull)
@@ -422,7 +420,7 @@ init(ClientContext * client_context)
  * Free fragment data
  */
 void
-free_fragment(FragmentData * data)
+free_fragment(FragmentData *data)
 {
 	if (data->authority)
 		pfree(data->authority);
@@ -490,7 +488,7 @@ init_client_context(ClientContext * client_context)
  * <hadoop_uri->host>:<hadoop_uri->port>
  */
 static void
-call_rest(PxfOptions * options, ClientContext * client_context, char *rest_msg)
+call_rest(PxfOptions *options, ClientContext * client_context, char *rest_msg)
 {
 	StringInfoData request;
 

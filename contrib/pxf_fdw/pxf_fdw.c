@@ -153,11 +153,39 @@ static void
 pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 {
 	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize starts");
+	Relation	rel;
+	ListCell   *lc;
+	List	   *retrieved_attrs;
+	Bitmapset  *attrs_used = NULL;
 
 	/*
-	 * Use an artificial number of estimated rows
+	 * Core code already has some lock on each rel being planned, so we can
+	 * use NoLock here.
 	 */
+	RangeTblEntry *rte = planner_rt_fetch(baserel->relid, root);
+
+	rel = heap_open(rte->relid, NoLock);
+
+	/*
+	 * Identify which attributes will need to be retrieved from the remote
+	 * server
+	 */
+	pull_varattnos((Node *) baserel->reltargetlist, baserel->relid, &attrs_used);
+
+	foreach(lc, baserel->baserestrictinfo)
+	{
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+		pull_varattnos((Node *) rinfo->clause, baserel->relid, &attrs_used);
+	}
+
+	deparseTargetList(rel, attrs_used, &retrieved_attrs);
+
+	heap_close(rel, NoLock);
+
+	/* Use an artificial number of estimated rows */
 	baserel->rows = 1000;
+	baserel->fdw_private = (void *) retrieved_attrs;
 
 	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize ends");
 }
@@ -189,7 +217,7 @@ pxfGetForeignPaths(PlannerInfo *root,
 #if PG_VERSION_NUM >= 90500
 								   NULL,	/* no extra plan */
 #endif
-								   NIL);
+								   baserel->fdw_private);
 
 
 
@@ -244,7 +272,7 @@ pxfGetForeignPlan(PlannerInfo *root,
 							scan_clauses,
 							scan_relid,
 							NIL,	/* no expressions to evaluate */
-							NIL
+							baserel->fdw_private
 #if PG_VERSION_NUM >= 90500
 							,NIL
 							,remote_exprs
@@ -284,17 +312,14 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
-	char	   *filterStr = NULL;
 	List	   *quals = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
-	ProjectionInfo *proj_info = node->ss.ps.ps_ProjInfo;
 	PxfFdwScanState *pxfsstate = NULL;
 	PxfOptions *options = NULL;
 	Relation	relation = node->ss.ss_currentRelation;
+	ForeignScan *foreignScan = (ForeignScan *) node->ss.ps.plan;
 
 	options = PxfGetOptions(foreigntableid);
-
-	filterStr = SerializePxfFilterQuals(quals);
 
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
@@ -303,16 +328,16 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	pxfsstate = (PxfFdwScanState *) palloc(sizeof(PxfFdwScanState));
 	initStringInfo(&pxfsstate->uri);
 
-	pxfsstate->filterStr = filterStr;
+	pxfsstate->filter_str = SerializePxfFilterQuals(quals);
 	pxfsstate->options = options;
-	pxfsstate->proj_info = proj_info;
+
 	pxfsstate->quals = quals;
-	pxfsstate->fragments = GetFragmentList(pxfsstate->options,
-										   relation,
-										   filterStr,
-										   pxfsstate->proj_info,
-										   pxfsstate->quals);
+	pxfsstate->retrieved_attrs = (List *) foreignScan->fdw_private;
 	pxfsstate->relation = relation;
+	pxfsstate->fragments = GetFragmentList(pxfsstate->options,
+										   pxfsstate->relation,
+										   pxfsstate->filter_str,
+										   pxfsstate->retrieved_attrs);
 
 	InitCopyState(pxfsstate);
 	node->fdw_state = (void *) pxfsstate;
@@ -557,7 +582,7 @@ pxfIsForeignRelUpdatable(Relation rel)
  * Initiates a copy state for pxfBeginForeignScan() and pxfReScanForeignScan()
  */
 static void
-InitCopyState(PxfFdwScanState * pxfsstate)
+InitCopyState(PxfFdwScanState *pxfsstate)
 {
 	CopyState	cstate;
 
@@ -623,7 +648,7 @@ InitCopyState(PxfFdwScanState * pxfsstate)
  * Initiates a copy state for pxfBeginForeignModify()
  */
 static void
-InitCopyStateForModify(PxfFdwModifyState * pxfmstate)
+InitCopyStateForModify(PxfFdwModifyState *pxfmstate)
 {
 	List	   *copy_options;
 	CopyState	cstate;

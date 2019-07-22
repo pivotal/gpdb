@@ -35,10 +35,9 @@
  * Adds the headers necessary for PXF service call
  */
 extern void BuildHttpHeaders(CHURL_HEADERS headers,
-							 PxfOptions * options,
+							 PxfOptions *options,
 							 Relation relation,
 							 char *filter_string,
-							 ProjectionInfo *proj_info,
-							 List *quals);
+							 List *retrieved_attrs);
 
 #endif							/* _PXFHEADERS_H_ */
