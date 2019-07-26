@@ -316,13 +316,14 @@ PxfMakeExpressionItemsList(List *quals, Node *parent)
 
 	foreach(lc, quals)
 	{
-		Node	   *node = (Node *) lfirst(lc);
-		NodeTag		tag = nodeTag(node);
-
 		expressionItem = (ExpressionItem *) palloc0(sizeof(ExpressionItem));
+		Node	   *node = (Node *) lfirst(lc);
+
 		expressionItem->node = node;
 		expressionItem->parent = parent;
 		expressionItem->processed = false;
+
+		NodeTag		tag = nodeTag(node);
 
 		elog(DEBUG1, "PxfMakeExpressionItemsList: found NodeTag %d", tag);
 		switch (tag)
@@ -1404,14 +1405,24 @@ SerializePxfFilterQuals(List *quals)
 		return result;
 	}
 
+	List	   *clauses = NULL;
+	ListCell   *lc;
+
+	foreach(lc, quals)
+	{
+		RestrictInfo *ri = (RestrictInfo *) lfirst(lc);
+
+		clauses = lappend(clauses, ri->clause);
+	}
+
 	/*
 	 * expressionItems will contain all the expressions including comparator
 	 * and logical operators in postfix order
 	 */
-	List	   *expressionItems = PxfMakeExpressionItemsList(quals, NULL);
+	List	   *expressionItems = PxfMakeExpressionItemsList(clauses, NULL);
 
 	/*
-	 * result will contain seralized version of the above postfix ordered
+	 * result will contain serialized version of the above postfix ordered
 	 * expressions list
 	 */
 	result = PxfSerializeFilterList(expressionItems);
