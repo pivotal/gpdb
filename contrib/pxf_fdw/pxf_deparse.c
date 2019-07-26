@@ -20,9 +20,7 @@
  * returned to *retrieved_attrs.
  */
 void
-deparseTargetList(Relation rel,
-				  Bitmapset *attrs_used,
-				  List **retrieved_attrs)
+deparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs)
 {
 	TupleDesc	tupdesc = RelationGetDescr(rel);
 	bool		have_wholerow;
@@ -49,5 +47,32 @@ deparseTargetList(Relation rel,
 		{
 			*retrieved_attrs = lappend_int(*retrieved_attrs, i);
 		}
+	}
+}
+
+/*
+ * Examine each qual clause in input_conds, and classify them into two groups,
+ * which are returned as two lists:
+ *	- remote_conds contains expressions that can be evaluated remotely
+ *	- local_conds contains expressions that can't be evaluated remotely
+ */
+void
+classifyConditions(PlannerInfo *root,
+				   RelOptInfo *baserel,
+				   List *input_conds,
+				   List **remote_conds,
+				   List **local_conds)
+{
+	ListCell   *lc;
+
+	*remote_conds = NIL;
+	*local_conds = NIL;
+
+	foreach(lc, input_conds)
+	{
+		RestrictInfo *ri = (RestrictInfo *) lfirst(lc);
+
+		/* for now, just assume that all WHERE clauses are OK on remote */
+		*remote_conds = lappend(*remote_conds, ri);
 	}
 }

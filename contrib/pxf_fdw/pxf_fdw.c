@@ -85,8 +85,8 @@ static int	pxfIsForeignRelUpdatable(Relation rel);
 /*
  * Helper functions
  */
-static void InitCopyState(PxfFdwScanState * pxfsstate);
-static void InitCopyStateForModify(PxfFdwModifyState * pxfmstate);
+static void InitCopyState(PxfFdwScanState *pxfsstate);
+static void InitCopyStateForModify(PxfFdwModifyState *pxfmstate);
 static CopyState BeginCopyTo(Relation forrel, List *options);
 
 /*
@@ -145,6 +145,40 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(fdw_routine);
 }
 
+typedef struct PxfFdwRelationInfo
+{
+	/* baserestrictinfo clauses, broken down into safe and unsafe subsets. */
+	List	   *remote_conds;
+	List	   *local_conds;
+
+	/* List of attributes (columns) that we need to get */
+	List	   *retrieved_attrs;
+
+	/* Bitmap of attr numbers we need to fetch from the remote server. */
+	Bitmapset  *attrs_used;
+}			PxfFdwRelationInfo;
+
+/*
+ * Indexes of FDW-private information stored in fdw_private lists.
+ *
+ * We store various information in ForeignScan.fdw_private to pass it from
+ * planner to executor.  Currently we store:
+ *
+ * 1) WHERE clause text to be sent to the remote server
+ * 2) Integer list of attribute numbers retrieved by the SELECT
+ *
+ * These items are indexed with the enum FdwScanPrivateIndex, so an item
+ * can be fetched with list_nth().  For example, to get the WHERE clauses:
+ *		sql = strVal(list_nth(fdw_private, FdwScanPrivateWhereClauses));
+ */
+enum FdwScanPrivateIndex
+{
+	/* WHERE clauses to be sent to PXF (as a String node) */
+	FdwScanPrivateWhereClauses,
+	/* Integer list of attribute numbers retrieved by the SELECT */
+	FdwScanPrivateRetrievedAttrs
+};
+
 /*
  * GetForeignRelSize
  *		set relation size estimates for a foreign table
@@ -152,11 +186,15 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 static void
 pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 {
-	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize starts");
+	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize starts on segment: %d", PXF_SEGMENT_ID);
 	Relation	rel;
 	ListCell   *lc;
-	List	   *retrieved_attrs;
-	Bitmapset  *attrs_used = NULL;
+
+	PxfFdwRelationInfo *fpinfo = (PxfFdwRelationInfo *) palloc(sizeof(PxfFdwRelationInfo));
+
+	baserel->fdw_private = (void *) fpinfo;
+
+	fpinfo->attrs_used = NULL;
 
 	/*
 	 * Core code already has some lock on each rel being planned, so we can
@@ -167,27 +205,33 @@ pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 	rel = heap_open(rte->relid, NoLock);
 
 	/*
+	 * Identify which baserestrictinfo clauses can be sent to the remote
+	 * server and which can't.
+	 */
+	classifyConditions(root, baserel, baserel->baserestrictinfo,
+					   &fpinfo->remote_conds, &fpinfo->local_conds);
+
+	/*
 	 * Identify which attributes will need to be retrieved from the remote
 	 * server
 	 */
-	pull_varattnos((Node *) baserel->reltargetlist, baserel->relid, &attrs_used);
+	pull_varattnos((Node *) baserel->reltargetlist, baserel->relid, &fpinfo->attrs_used);
 
-	foreach(lc, baserel->baserestrictinfo)
+	foreach(lc, fpinfo->local_conds)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 
-		pull_varattnos((Node *) rinfo->clause, baserel->relid, &attrs_used);
+		pull_varattnos((Node *) rinfo->clause, baserel->relid, &fpinfo->attrs_used);
 	}
 
-	deparseTargetList(rel, attrs_used, &retrieved_attrs);
+	deparseTargetList(rel, fpinfo->attrs_used, &fpinfo->retrieved_attrs);
 
 	heap_close(rel, NoLock);
 
 	/* Use an artificial number of estimated rows */
 	baserel->rows = 1000;
-	baserel->fdw_private = (void *) retrieved_attrs;
 
-	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize ends");
+	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize ends on segment: %d", PXF_SEGMENT_ID);
 }
 
 /*
@@ -201,9 +245,11 @@ pxfGetForeignPaths(PlannerInfo *root,
 {
 	ForeignPath *path = NULL;
 	int			total_cost = DEFAULT_PXF_FDW_STARTUP_COST;
+	PxfFdwRelationInfo *fpinfo = (PxfFdwRelationInfo *) baserel->fdw_private;
 
 
-	elog(DEBUG5, "pxf_fdw: pxfGetForeignPaths starts");
+	elog(DEBUG5, "pxf_fdw: pxfGetForeignPaths starts on segment: %d", PXF_SEGMENT_ID);
+
 
 	path = create_foreignscan_path(root, baserel,
 #if PG_VERSION_NUM >= 90600
@@ -217,7 +263,7 @@ pxfGetForeignPaths(PlannerInfo *root,
 #if PG_VERSION_NUM >= 90500
 								   NULL,	/* no extra plan */
 #endif
-								   baserel->fdw_private);
+								   fpinfo->retrieved_attrs);
 
 
 
@@ -226,7 +272,7 @@ pxfGetForeignPaths(PlannerInfo *root,
 	 */
 	add_path(baserel, (Path *) path);
 
-	elog(DEBUG5, "pxf_fdw: pxfGetForeignPaths ends");
+	elog(DEBUG5, "pxf_fdw: pxfGetForeignPaths ends on segment: %d", PXF_SEGMENT_ID);
 }
 
 /*
@@ -254,8 +300,10 @@ pxfGetForeignPlan(PlannerInfo *root,
 #endif
 {
 	Index		scan_relid = baserel->relid;
+	PxfFdwRelationInfo *fpinfo = (PxfFdwRelationInfo *) baserel->fdw_private;
+	List	   *fdw_private;
 
-	elog(DEBUG5, "pxf_fdw: pxfGetForeignPlan starts");
+	elog(DEBUG5, "pxf_fdw: pxfGetForeignPlan starts on segment: %d", PXF_SEGMENT_ID);
 
 	/*
 	 * We have no native ability to evaluate restriction clauses, so we just
@@ -266,13 +314,25 @@ pxfGetForeignPlan(PlannerInfo *root,
 	 */
 	scan_clauses = extract_actual_clauses(scan_clauses, false);
 
-	elog(DEBUG5, "pxf_fdw: pxfGetForeignPlan ends");
+	/*
+	 * Build the fdw_private list that will be available to the executor.
+	 * Items in the list must match enum FdwScanPrivateIndex, above.
+	 */
 
-	return make_foreignscan(tlist,
+
+	/* here we serialize the WHERE clauses */
+	char	   *where_clauses_str = SerializePxfFilterQuals(fpinfo->remote_conds);
+
+	fdw_private = list_make2(makeString(where_clauses_str), fpinfo->retrieved_attrs);
+
+	elog(DEBUG5, "pxf_fdw: pxfGetForeignPlan ends on segment: %d", PXF_SEGMENT_ID);
+
+	return make_foreignscan(
+							tlist,
 							scan_clauses,
 							scan_relid,
 							NIL,	/* no expressions to evaluate */
-							baserel->fdw_private
+							fdw_private
 #if PG_VERSION_NUM >= 90500
 							,NIL
 							,remote_exprs
@@ -315,11 +375,8 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	List	   *quals = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
 	PxfFdwScanState *pxfsstate = NULL;
-	PxfOptions *options = NULL;
 	Relation	relation = node->ss.ss_currentRelation;
 	ForeignScan *foreignScan = (ForeignScan *) node->ss.ps.plan;
-
-	options = PxfGetOptions(foreigntableid);
 
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
@@ -328,11 +385,13 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	pxfsstate = (PxfFdwScanState *) palloc(sizeof(PxfFdwScanState));
 	initStringInfo(&pxfsstate->uri);
 
-	pxfsstate->filter_str = SerializePxfFilterQuals(quals);
-	pxfsstate->options = options;
+	pxfsstate->options = PxfGetOptions(foreigntableid);
+
+	/* retrieve fdw-private stuff from pxfGetForeignPlan() */
+	pxfsstate->filter_str = strVal(list_nth(foreignScan->fdw_private, FdwScanPrivateWhereClauses));
+	pxfsstate->retrieved_attrs = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateRetrievedAttrs);
 
 	pxfsstate->quals = quals;
-	pxfsstate->retrieved_attrs = (List *) foreignScan->fdw_private;
 	pxfsstate->relation = relation;
 	pxfsstate->fragments = GetFragmentList(pxfsstate->options,
 										   pxfsstate->relation,
@@ -705,7 +764,8 @@ InitCopyStateForModify(PxfFdwModifyState *pxfmstate)
 /*
  * Set up CopyState for writing to an foreign table.
  */
-static CopyState BeginCopyTo(Relation forrel, List *options)
+static CopyState
+BeginCopyTo(Relation forrel, List *options)
 {
 	CopyState	cstate;
 
@@ -715,8 +775,8 @@ static CopyState BeginCopyTo(Relation forrel, List *options)
 	cstate->dispatch_mode = COPY_DIRECT;
 
 	/*
-	 * We use COPY_CALLBACK to mean that the each line should be
-	 * left in fe_msgbuf. There is no actual callback!
+	 * We use COPY_CALLBACK to mean that the each line should be left in
+	 * fe_msgbuf. There is no actual callback!
 	 */
 	cstate->copy_dest = COPY_CALLBACK;
 
@@ -724,12 +784,12 @@ static CopyState BeginCopyTo(Relation forrel, List *options)
 	 * Some more initialization, that in the normal COPY TO codepath, is done
 	 * in CopyTo() itself.
 	 */
-	cstate->null_print_client = cstate->null_print;		/* default */
+	cstate->null_print_client = cstate->null_print; /* default */
 	if (cstate->need_transcoding)
 		cstate->null_print_client = pg_server_to_custom(cstate->null_print,
-		                                                cstate->null_print_len,
-		                                                cstate->file_encoding,
-		                                                cstate->enc_conversion_proc);
+														cstate->null_print_len,
+														cstate->file_encoding,
+														cstate->enc_conversion_proc);
 
 	return cstate;
 }
