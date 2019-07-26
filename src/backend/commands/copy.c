@@ -1809,7 +1809,7 @@ ProcessCopyOptions(CopyState cstate,
  * If in the text format, delimit columns with delimiter <delim> and print
  * NULL values as <null_print>.
  */
-static CopyState
+CopyState
 BeginCopy(bool is_from,
 		  Relation rel,
 		  Node *raw_query,
