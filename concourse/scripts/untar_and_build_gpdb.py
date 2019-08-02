@@ -34,8 +34,7 @@ if action == 'build':
     build_gpdb_cmd = "gpdb_main_src/concourse/scripts/build_gpdb.py --mode={0} --output_dir=gpdb_binary/install --action={1} --configure-option='{2}' --orca-in-gpdb-install-location bin_orca bin_xerces".format(mode, action, configure_option)
     exec_command(build_gpdb_cmd)
 
-    package_tarball_cmd = "env src_root=gpdb_binary/install dst_tarball=package_tarball/bin_gpdb.tar.gz gpdb_main_src/concourse/scripts/package_tarball.bash"
-    exec_command(package_tarball_cmd)
+    exec_command("tar -czf package_tarball/bin_gpdb.tar.gz -C gpdb_binary/install .")
 
 elif action.startswith('test'):
     environment_variables = os.environ['BLDWRAP_POSTGRES_CONF_ADDONS']

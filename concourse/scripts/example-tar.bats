@@ -19,7 +19,8 @@ teardown() {
 }
 
 main() {
-  ../scripts/package_tarball.bash
+  set -eux
+  tar -czf "$dst_tarball" -C "$src_root" .
 }
 
 @test "it fails if any variables are unbound" {
