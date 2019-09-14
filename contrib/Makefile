@@ -85,6 +85,10 @@ else
 ALWAYS_SUBDIRS += sepgsql
 endif
 
+ifeq ($(enable_pxf),yes)
+SUBDIRS += pxf_fdw
+endif
+
 ifeq ($(with_perl),yes)
 SUBDIRS += hstore_plperl
 else
