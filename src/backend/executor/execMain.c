@@ -4825,7 +4825,7 @@ FillSliceTable_walker(Node *node, void *context)
 			Oid			reloid = getrelid(idx, stmt->rtable);
 			GpPolicyType policyType;
 
-			policyType = GpPolicyFetch(reloid)->ptype;
+			policyType = GpPolicyFetchForCommandType(reloid, mt->operation)->ptype;
 
 #ifdef USE_ASSERT_CHECKING
 			{

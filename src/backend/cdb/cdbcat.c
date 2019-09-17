@@ -23,22 +23,18 @@
 #include "catalog/indexing.h"
 #include "catalog/objectaddress.h"
 #include "catalog/pg_exttable.h"
-#include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
-#include "catalog/pg_type.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"		/* Gp_role */
-#include "utils/array.h"
+#include "foreign/foreign.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/tqual.h"
 #include "utils/syscache.h"
-#include "utils/lsyscache.h"
 
 /*
  * The default numsegments when creating tables.  The value can be an integer
@@ -259,23 +255,43 @@ GpPolicyIsEntry(const GpPolicy *policy)
 }
 
 /*
- * GpPolicyFetch
+ * GpPolicyFetchForCommandType
  *
  * Looks up the distribution policy of given relation from
- * gp_distribution_policy table (or by implicit rules for external tables)
- * Returns an GpPolicy object, allocated in the current memory context,
- * containing the information.
+ * gp_distribution_policy table (or by implicit rules for external tables).
+ * For foreign relations, a POLICYTYPE_ENTRY is always used except for
+ * UPDATE and DELETE command types. Returns an GpPolicy object, allocated in
+ * the current memory context, containing the information.
  *
- * The caller is responsible for passing in a valid relation oid.  This
- * function does not check, and assigns a policy of type POLICYTYPE_ENTRY
- * for any oid not found in gp_distribution_policy.
+ * The caller is responsible for passing in a valid relation oid and command
+ * type. This function does not check, and assigns a policy of type
+ * POLICYTYPE_ENTRY for any oid not found in gp_distribution_policy.
  */
 GpPolicy *
-GpPolicyFetch(Oid tbloid)
+GpPolicyFetchForCommandType(Oid tbloid, CmdType commandType)
 {
 	GpPolicy   *policy = NULL;	/* The result */
 	HeapTuple	gp_policy_tuple = NULL;
 
+	if (get_rel_relstorage(tbloid) == RELSTORAGE_FOREIGN)
+	{
+		ForeignTable *table = GetForeignTable(tbloid);
+
+		/*
+		 * Updates and deletes always go through master
+		 * 1. check mpp_execute
+		 * 2. check that we are not in DELETE or UPDATE
+		 */
+		if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS &&
+			commandType != CMD_UPDATE && commandType != CMD_DELETE)
+		{
+			/*
+			 * Currently only random distribution is supported for
+			 * Foreign-Data wrappers for write
+			 */
+			return createRandomPartitionedPolicy(getgpsegmentCount());
+		}
+	}
 	/*
 	 * EXECUTE-type external tables have an "ON ..." specification, stored in
 	 * pg_exttable.location. See if it's "MASTER_ONLY". Other types of
@@ -410,6 +426,24 @@ GpPolicyFetch(Oid tbloid)
 
 	return policy;
 }								/* GpPolicyFetch */
+
+/*
+ * GpPolicyFetch
+ *
+ * Looks up the distribution policy of given relation from
+ * gp_distribution_policy table (or by implicit rules for external tables)
+ * Returns an GpPolicy object, allocated in the current memory context,
+ * containing the information.
+ *
+ * The caller is responsible for passing in a valid relation oid.  This
+ * function does not check, and assigns a policy of type POLICYTYPE_ENTRY
+ * for any oid not found in gp_distribution_policy.
+ */
+GpPolicy *
+GpPolicyFetch(Oid tbloid)
+{
+	return GpPolicyFetchForCommandType(tbloid, CMD_UNKNOWN);
+}
 
 /*
  * Sets the policy of a table into the gp_distribution_policy table

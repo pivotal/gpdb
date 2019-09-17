@@ -2910,6 +2910,13 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
 
+	if (root->parse->commandType == CMD_UPDATE ||
+		root->parse->commandType == CMD_DELETE)
+	{
+		/* Updates and deletes always go through master */
+		rel->ftEntry->exec_location = FTEXECLOCATION_MASTER;
+	}
+
 	switch (rel->ftEntry->exec_location)
 	{
 		case FTEXECLOCATION_ANY:

@@ -155,6 +155,8 @@ extern bool GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt);
  */
 extern GpPolicy *GpPolicyFetch(Oid tbloid);
 
+extern GpPolicy *GpPolicyFetchForCommandType(Oid tbloid, CmdType commandType);
+
 /*
  * GpPolicyStore: sets the GpPolicy for a table.
  */

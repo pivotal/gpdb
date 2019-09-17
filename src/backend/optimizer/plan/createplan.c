@@ -6596,7 +6596,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 			Assert(rti > 0);
 			Assert(rte->rtekind == RTE_RELATION);
 
-			targetPolicy = GpPolicyFetch(rte->relid);
+			targetPolicy =
+				GpPolicyFetchForCommandType(rte->relid, node->operation);
 			targetPolicyType = targetPolicy->ptype;
 
 			numsegments = Max(targetPolicy->numsegments, numsegments);

@@ -411,7 +411,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 		Assert(rte->rtekind == RTE_RELATION);
 
-		targetPolicy = GpPolicyFetch(rte->relid);
+		targetPolicy =
+			GpPolicyFetchForCommandType(rte->relid, query->commandType);
 		targetPolicyType = targetPolicy->ptype;
 	}
 
