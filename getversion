@@ -2,7 +2,7 @@
 
 # Make sure we're running from the root git repository, not whatever submodule
 # we could have been called from.
-pushd $(dirname "$0") >/dev/null
+pushd "$(dirname "$0")" >/dev/null || exit
 
 VERSION=$(perl -e 'while(<>){print $1 if (/^PACKAGE_VERSION='\''(.+)'\''$/)}' <configure)
 BUILDNUMBER=dev
@@ -39,4 +39,4 @@ else
 	fi
 	echo "${VERSION} build ${BUILDNUMBER}"
 fi
-popd >/dev/null
+popd >/dev/null || exit
