@@ -1,11 +1,71 @@
 #!/usr/bin/env bash
 
-# Make sure we're running from the root git repository, not whatever submodule
-# we could have been called from.
-pushd "$(dirname "$0")" >/dev/null || exit
+append_to_post_release() {
+	# given a valid semi-semantic version string and a suffix string,
+	# output a valid semi-semantic version string that includes suffix in the post_release
+	local separator
+	case "${1}" in
+	*+*) separator="." ;;
+	*) separator="+" ;;
+	esac
+	printf "%s${separator}%s" "${1}" "${2}"
+}
 
-VERSION=$(perl -e 'while(<>){print $1 if (/^PACKAGE_VERSION='\''(.+)'\''$/)}' <configure)
-BUILDNUMBER=dev
+drop_commit_sha() {
+	if [ -z "${1+set}" ]; then
+		printf >&2 'git_describe_output is missing'
+		return 1
+	fi
+	local git_describe_output="${1}"
+
+	local tag
+	local build
+
+	local regexp
+	regexp='^(.*)\-([0-9]*)\-g([0-9a-f]*)$'
+	# case where we are not at a tag and git describe is tag-###-gabc
+	if [[ "${git_describe_output}" =~ $regexp ]]; then
+		tag="${BASH_REMATCH[1]}"
+		build="${BASH_REMATCH[2]}"
+	else
+		# this case where git describe is giving us the tag
+		tag="${git_describe_output}"
+		build=""
+	fi
+
+	local final_version="${tag}"
+	if [ -n "${build}" ]; then
+		final_version="$(append_to_post_release "${final_version}" "${build}")"
+	fi
+
+	printf "%s" "${final_version}"
+}
+
+generate_build_version() {
+	if [ -z "${1+set}" ]; then
+		printf >&2 'git_describe_output is missing'
+		return 1
+	fi
+	local git_describe_output="${1}"
+
+	if [ -z "${2+set}" ]; then
+		printf >&2 'post_release_suffix is missing'
+		return 1
+	fi
+	local post_release_suffix="${2}"
+
+	if [[ "${post_release_suffix}" =~ \+ ]]; then
+		printf >&2 'post_release_suffix cannot contain a +'
+		return 1
+	fi
+
+	final_version="$(drop_commit_sha "${git_describe_output}")"
+	if [ -n "${post_release_suffix}" ]; then
+		final_version="$(append_to_post_release "${final_version}" "${post_release_suffix}")"
+	fi
+
+	printf "%s" "${final_version}"
+}
 
 # Call git describe, and convert it to a semi-semantic version, like
 # 5.0.0-alpha.0+dev.52.g123abc
@@ -13,30 +73,45 @@ generate_dev_version() {
 	git describe | perl -pe 's/(.*)-([0-9]*)-(g[0-9a-f]*)/\1+dev.\2.\3/'
 }
 
-# If we are in a Git repository and have git installed, build the version
-# string using the latest tag in case it's reachable
-if type git >/dev/null 2>&1 && [ -d '.git' ]; then
+getversion() {
+	# Make sure we're running from the root git repository, not whatever submodule
+	# we could have been called from.
+	pushd "$(dirname "$0")" >/dev/null || return
 
-	# Check for tag reachability, in case of shallow clones we might not
-	# be able to use git describe since the commit which was tagged is
-	# unreachable even if we have pulled the tags. If we can reach it,
-	# overwrite the VERSION from autoconf with the output, else append
-	# HEAD commit info
-	if git describe >/dev/null 2>&1; then
-		VERSION=$(generate_dev_version)
+	VERSION=$(perl -e 'while(<>){print $1 if (/^PACKAGE_VERSION='\''(.+)'\''$/)}' <configure)
+	BUILDNUMBER=dev
+
+	# If we are in a Git repository and have git installed, build the version
+	# string using the latest tag in case it's reachable
+	if type git >/dev/null 2>&1 && [ -d '.git' ]; then
+		# Check for tag reachability, in case of shallow clones we might not
+		# be able to use git describe since the commit which was tagged is
+		# unreachable even if we have pulled the tags. If we can reach it,
+		# overwrite the VERSION from autoconf with the output, else append
+		# HEAD commit info
+		if git describe >/dev/null 2>&1; then
+			VERSION=$(generate_dev_version)
+		else
+			VERSION+=+
+			VERSION+=$(git rev-parse --short HEAD)
+		fi
+	fi
+
+	FLAG="${1:-noflag}"
+	if [ "$FLAG" = '--short' ]; then
+		echo "${VERSION}"
+	elif [ "${FLAG}" = '--build-with-post-release' ]; then
+		build_version="$(generate_build_version "$(git describe)" "${2}")" || return 1
+		echo "${build_version}"
 	else
-		VERSION+=+
-		VERSION+=$(git rev-parse --short HEAD)
+		if [ -f BUILD_NUMBER ]; then
+			BUILDNUMBER=$(cat BUILD_NUMBER)
+		fi
+		echo "${VERSION} build ${BUILDNUMBER}"
 	fi
-fi
+	popd >/dev/null || return
+}
 
-FLAG="${1:-noflag}"
-if [ "$FLAG" = '--short' ]; then
-	echo "${VERSION}"
-else
-	if [ -f BUILD_NUMBER ]; then
-		BUILDNUMBER=$(cat BUILD_NUMBER)
-	fi
-	echo "${VERSION} build ${BUILDNUMBER}"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	getversion "$@"
 fi
-popd >/dev/null || exit
