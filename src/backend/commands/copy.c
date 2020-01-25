@@ -147,6 +147,9 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 
 /* non-export function prototypes */
+static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
+						   const char *queryString, List *attnamelist, List *options,
+						   TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
 							 const char *filename, bool is_program, List *attnamelist,
@@ -1198,6 +1201,7 @@ ProcessCopyOptions(CopyState cstate,
 {
 	bool		format_specified = false;
 	ListCell   *option;
+	bool		delim_off = false;
 
 	/* Support external use for option sanity checking */
 	if (cstate == NULL)
@@ -1254,6 +1258,9 @@ ProcessCopyOptions(CopyState cstate,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
 			cstate->delim = defGetString(defel);
+
+			if (cstate->delim && pg_strcasecmp(cstate->delim, "off") == 0)
+				delim_off = true;
 		}
 		else if (strcmp(defel->defname, "null") == 0)
 		{
@@ -1417,11 +1424,6 @@ ProcessCopyOptions(CopyState cstate,
 					 errmsg("option \"%s\" not recognized", defel->defname)));
 	}
 
-	bool	delim_off = false;
-
-	if (cstate->delim && pg_strcasecmp(cstate->delim, "off") == 0)
-		delim_off = true;
-
 	/*
 	 * Check for incompatible options (must do these two before inserting
 	 * defaults)
@@ -1429,12 +1431,12 @@ ProcessCopyOptions(CopyState cstate,
 	if (cstate->binary && cstate->delim)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify DELIMITER in BINARY mode")));
+				 errmsg("COPY cannot specify DELIMITER in BINARY mode")));
 
 	if (cstate->binary && cstate->null_print)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify NULL in BINARY mode")));
+				 errmsg("COPY cannot specify NULL in BINARY mode")));
 
 	cstate->eol_type = EOL_UNKNOWN;
 
@@ -1457,19 +1459,6 @@ ProcessCopyOptions(CopyState cstate,
 	if (!cstate->csv_mode && !cstate->escape)
 		cstate->escape = "\\";			/* default escape for text mode */
 
-	/* Only single-byte delimiter strings are supported. */
-	if (strlen(cstate->delim) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("COPY delimiter must be a single one-byte character")));
-
-	/* Disallow end-of-line characters */
-	if (strchr(cstate->delim, '\r') != NULL ||
-		strchr(cstate->delim, '\n') != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("COPY delimiter cannot be newline or carriage return")));
-
 	if (strchr(cstate->null_print, '\r') != NULL ||
 		strchr(cstate->null_print, '\n') != NULL)
 		ereport(ERROR,
@@ -1491,7 +1480,7 @@ ProcessCopyOptions(CopyState cstate,
 			   cstate->delim[0]) != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter cannot be \"%s\"", cstate->delim)));
+				 errmsg("COPY delimiter cannot be \"%s\"", cstate->delim)));
 
 	/* Check header */
 	/*
@@ -1501,64 +1490,64 @@ ProcessCopyOptions(CopyState cstate,
 	if (cstate->binary && cstate->header_line)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify HEADER in BINARY mode")));
+				 errmsg("COPY cannot specify HEADER in BINARY mode")));
 
 	/* Check quote */
 	if (!cstate->csv_mode && cstate->quote != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("quote available only in CSV mode")));
+				 errmsg("COPY quote available only in CSV mode")));
 
 	if (cstate->csv_mode && strlen(cstate->quote) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("quote must be a single one-byte character")));
+				 errmsg("COPY quote must be a single one-byte character")));
 
-	if (cstate->csv_mode && cstate->delim[0] == cstate->quote[0])
+	if (cstate->csv_mode && cstate->delim[0] == cstate->quote[0] && !delim_off)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter and quote must be different")));
+				 errmsg("COPY delimiter and quote must be different")));
 
 	/* Check escape */
 	if (cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("escape in CSV format must be a single character")));
+				 errmsg("COPY escape in CSV format must be a single character")));
 
 	if (!cstate->csv_mode && cstate->escape != NULL &&
 		(strchr(cstate->escape, '\r') != NULL ||
 		strchr(cstate->escape, '\n') != NULL))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("escape representation in text format cannot use newline or carriage return")));
+				 errmsg("COPY escape representation in text format cannot use newline or carriage return")));
 
 	if (!cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
 	{
 		if (pg_strcasecmp(cstate->escape, "off") != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("escape must be a single character, or [OFF/off] to disable escapes")));
+					 errmsg("COPY escape must be a single character, or [OFF/off] to disable escapes")));
 	}
 
 	/* Check force_quote */
 	if (!cstate->csv_mode && (cstate->force_quote || cstate->force_quote_all))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("force quote available only in CSV mode")));
-	if ((cstate->force_quote != NIL || cstate->force_quote_all) && is_from)
+				 errmsg("COPY force quote available only in CSV mode")));
+	if ((cstate->force_quote || cstate->force_quote_all) && is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("force quote only available for data unloading, not loading")));
+				 errmsg("COPY force quote only available using COPY TO")));
 
 	/* Check force_notnull */
 	if (!cstate->csv_mode && cstate->force_notnull != NIL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("force not null available only in CSV mode")));
+				 errmsg("COPY force not null available only in CSV mode")));
 	if (cstate->force_notnull != NIL && !is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("force not null only available for data loading, not unloading")));
+			  errmsg("COPY force not null only available using COPY FROM")));
 
 	/* Check force_null */
 	if (!cstate->csv_mode && cstate->force_null != NIL)
@@ -1570,12 +1559,6 @@ ProcessCopyOptions(CopyState cstate,
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("COPY force null only available using COPY FROM")));
-
-	/* Don't allow the delimiter to appear in the null string. */
-	if (strchr(cstate->null_print, cstate->delim[0]) != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("COPY delimiter must not appear in the NULL specification")));
 
 	/* Don't allow the CSV quote char to appear in the null string. */
 	if (cstate->csv_mode &&
@@ -1598,7 +1581,7 @@ ProcessCopyOptions(CopyState cstate,
 		if (strlen(cstate->delim) != 1 && !delim_off)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("delimiter must be a single one-byte character, or \'off\'")));
+					 errmsg("COPY delimiter must be a single one-byte character, or \'off\'")));
 	}
 	else
 	{
@@ -1606,7 +1589,7 @@ ProcessCopyOptions(CopyState cstate,
 		if ((strlen(cstate->delim) != 1 || IS_HIGHBIT_SET(cstate->delim[0])) && !delim_off )
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("delimiter must be a single one-byte character, or \'off\'")));
+					 errmsg("COPY delimiter must be a single one-byte character, or \'off\'")));
 	}
 
 	/* Disallow end-of-line characters */
@@ -1614,23 +1597,17 @@ ProcessCopyOptions(CopyState cstate,
 		strchr(cstate->delim, '\n') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter cannot be newline or carriage return")));
-
-	if (strchr(cstate->null_print, '\r') != NULL ||
-		strchr(cstate->null_print, '\n') != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("null representation cannot use newline or carriage return")));
+				 errmsg("COPY delimiter cannot be newline or carriage return")));
 
 	if (!cstate->csv_mode && strchr(cstate->delim, '\\') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter cannot be backslash")));
+				 errmsg("COPY delimiter cannot be backslash")));
 
 	if (strchr(cstate->null_print, cstate->delim[0]) != NULL && !delim_off)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("delimiter must not appear in the NULL specification")));
+				 errmsg("COPY delimiter must not appear in the NULL specification")));
 
 	if (delim_off)
 	{
@@ -1730,7 +1707,7 @@ ProcessCopyOptions(CopyState cstate,
  * If in the text format, delimit columns with delimiter <delim> and print
  * NULL values as <null_print>.
  */
-CopyState
+static CopyState
 BeginCopy(bool is_from,
 		  Relation rel,
 		  Node *raw_query,
@@ -1742,6 +1719,8 @@ BeginCopy(bool is_from,
 	CopyState	cstate;
 	int			num_phys_attrs;
 	MemoryContext oldcontext;
+	bool is_copy = true;
+	int num_columns = 0;
 
 	/* Allocate workspace and zero all fields */
 	cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
@@ -1760,10 +1739,20 @@ BeginCopy(bool is_from,
 
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
+	/*
+	 * Since external scan calls BeginCopyFrom to init CopyStateData.
+	 * Current relation may be an external relation.
+	 */
+	if (rel != NULL && RelationIsExternal(rel))
+	{
+		is_copy = false;
+		num_columns = rel->rd_att->natts;
+	}
+
 	/* Extract options from the statement node tree */
 	ProcessCopyOptions(cstate, is_from, options,
-					   0, /* pass correct value when COPY supports no delim */
-					   true);
+					   num_columns, /* pass correct value when COPY supports no delim */
+					   is_copy);
 
 
 	/* Process the source/target relation or query */
@@ -3867,8 +3856,12 @@ CopyFrom(CopyState cstate)
 				int relnatts;
 
 				if (!resultRelInfo->ri_resultSlot)
+				{
+					MemoryContextSwitchTo(estate->es_query_cxt);
 					resultRelInfo->ri_resultSlot =
 						MakeSingleTupleTableSlot(resultRelInfo->ri_RelationDesc->rd_att);
+					MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+				}
 
 				relnatts = resultRelInfo->ri_RelationDesc->rd_att->natts;
 				slot = resultRelInfo->ri_resultSlot;
@@ -4031,7 +4024,6 @@ CopyFrom(CopyState cstate)
 				HeapTuple	tuple;
 				if (resultRelInfo->nBufferedTuples == 0)
 					firstBufferedLineNo = cstate->cur_lineno;
-				tuple = ExecFetchSlotHeapTuple(slot);
 
 				resultRelInfoList = list_append_unique_ptr(resultRelInfoList, resultRelInfo);
 				if (resultRelInfo->bufferedTuples == NULL)
@@ -4043,7 +4035,8 @@ CopyFrom(CopyState cstate)
 
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 				/* Add this tuple to the tuple buffer */
-				resultRelInfo->bufferedTuples[resultRelInfo->nBufferedTuples++] = heap_copytuple(tuple);
+				tuple = ExecCopySlotHeapTuple(slot);
+				resultRelInfo->bufferedTuples[resultRelInfo->nBufferedTuples++] = tuple;
 				resultRelInfo->bufferedTuplesSize += tuple->t_len;
 				nTotalBufferedTuples++;
 				totalBufferedTuplesSize += tuple->t_len;
@@ -4906,7 +4899,6 @@ HandleCopyError(CopyState cstate)
 				else
 				{
 					HandleSingleRowError(cstate->cdbsreh);
-					//ErrorLogWrite(cstate->cdbsreh);
 				}
 			}
 		}
@@ -6079,18 +6071,24 @@ CopyReadLineText(CopyState cstate)
 					if (c2 == '\n')
 					{
 						if (!cstate->csv_mode)
+						{
+							cstate->raw_buf_index = raw_buf_ptr;
 							ereport(ERROR,
 									(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 									 errmsg("end-of-copy marker does not match previous newline style")));
+						}
 						else
 							NO_END_OF_COPY_GOTO;
 					}
 					else if (c2 != '\r')
 					{
 						if (!cstate->csv_mode)
+						{
+							cstate->raw_buf_index = raw_buf_ptr;
 							ereport(ERROR,
 									(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 									 errmsg("end-of-copy marker corrupt")));
+						}
 						else
 							NO_END_OF_COPY_GOTO;
 					}
@@ -6104,9 +6102,12 @@ CopyReadLineText(CopyState cstate)
 				if (c2 != '\r' && c2 != '\n')
 				{
 					if (!cstate->csv_mode)
+					{
+						cstate->raw_buf_index = raw_buf_ptr;
 						ereport(ERROR,
 								(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 								 errmsg("end-of-copy marker corrupt")));
+					}
 					else
 						NO_END_OF_COPY_GOTO;
 				}
@@ -6115,6 +6116,7 @@ CopyReadLineText(CopyState cstate)
 					(cstate->eol_type == EOL_CRNL && c2 != '\n') ||
 					(cstate->eol_type == EOL_CR && c2 != '\r'))
 				{
+					cstate->raw_buf_index = raw_buf_ptr;
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("end-of-copy marker does not match previous newline style")));

@@ -805,29 +805,30 @@ InitCopyStateForModify(PxfFdwModifyState *pxfmstate)
 static CopyState
 BeginCopyTo(Relation forrel, List *options)
 {
-	CopyState	cstate;
+//	CopyState	cstate;
 
 	Assert(RelationIsForeign(forrel));
 
-	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
-	cstate->dispatch_mode = COPY_DIRECT;
-
-	/*
-	 * We use COPY_CALLBACK to mean that the each line should be left in
-	 * fe_msgbuf. There is no actual callback!
-	 */
-	cstate->copy_dest = COPY_CALLBACK;
-
-	/*
-	 * Some more initialization, that in the normal COPY TO codepath, is done
-	 * in CopyTo() itself.
-	 */
-	cstate->null_print_client = cstate->null_print; /* default */
-	if (cstate->need_transcoding)
-		cstate->null_print_client = pg_server_to_custom(cstate->null_print,
-														cstate->null_print_len,
-														cstate->file_encoding,
-														cstate->enc_conversion_proc);
-
-	return cstate;
+	return NULL;
+//	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
+//	cstate->dispatch_mode = COPY_DIRECT;
+//
+//	/*
+//	 * We use COPY_CALLBACK to mean that the each line should be left in
+//	 * fe_msgbuf. There is no actual callback!
+//	 */
+//	cstate->copy_dest = COPY_CALLBACK;
+//
+//	/*
+//	 * Some more initialization, that in the normal COPY TO codepath, is done
+//	 * in CopyTo() itself.
+//	 */
+//	cstate->null_print_client = cstate->null_print; /* default */
+//	if (cstate->need_transcoding)
+//		cstate->null_print_client = pg_server_to_custom(cstate->null_print,
+//														cstate->null_print_len,
+//														cstate->file_encoding,
+//														cstate->enc_conversion_proc);
+//
+//	return cstate;
 }
