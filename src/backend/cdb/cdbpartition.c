@@ -7739,7 +7739,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 					errmsg("cannot exchange relations with differing persistence types")));
 	}
 
-	if (RelationIsExternal(newrel))
+	if (RelationIsExternal(newrel) || RelationIsForeign(newrel))
 	{
 		if (rel_is_default_partition(oldrel->rd_id))
 		{
@@ -7851,7 +7851,8 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 	 * either the oldpart or the newpart is external.
 	 */
 	if (congruent && Gp_role == GP_ROLE_DISPATCH &&
-		!RelationIsExternal(newrel) && !RelationIsExternal(oldrel))
+		!RelationIsExternal(newrel) && !RelationIsExternal(oldrel) &&
+		!RelationIsForeign(newrel) && !RelationIsForeign(oldrel))
 	{
 		GpPolicy   *parpol = rel->rd_cdbpolicy;
 		GpPolicy   *oldpol = oldrel->rd_cdbpolicy;
@@ -8994,7 +8995,7 @@ has_external_partition(List *rules) {
 		PartitionRule *rule = lfirst(lc);
 		Relation rel = heap_open(rule->parchildrelid, NoLock);
 
-		if (RelationIsExternal(rel))
+		if (RelationIsExternal(rel) || RelationIsForeign(rel))
 		{
 			heap_close(rel, NoLock);
 			return true;
