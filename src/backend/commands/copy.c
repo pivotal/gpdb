@@ -76,8 +76,6 @@
 #define OCTVALUE(c) ((c) - '0')
 
 
-
-
 /*
  * These macros centralize code used to process line_buf and raw_buf buffers.
  * They are macros because they often do continue/break control and to avoid
@@ -147,9 +145,6 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 
 /* non-export function prototypes */
-static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-						   const char *queryString, List *attnamelist, List *options,
-						   TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
 							 const char *filename, bool is_program, List *attnamelist,
@@ -1707,7 +1702,7 @@ ProcessCopyOptions(CopyState cstate,
  * If in the text format, delimit columns with delimiter <delim> and print
  * NULL values as <null_print>.
  */
-static CopyState
+CopyState
 BeginCopy(bool is_from,
 		  Relation rel,
 		  Node *raw_query,
@@ -4889,7 +4884,7 @@ HandleCopyError(CopyState cstate)
 
 				SendCopyFromForwardedError(cstate, cstate->cdbCopy, errormsg);
 			}
-			else 
+			else
 			{
 				/* after all the prep work let cdbsreh do the real work */
 				if (Gp_role == GP_ROLE_DISPATCH)
@@ -5672,7 +5667,7 @@ SendCopyFromForwardedError(CopyState cstate, CdbCopy *cdbCopy, char *errormsg)
 		cstate->lastsegid = 0; /* start over from first segid */
 
 	target_seg = (cstate->lastsegid++ % cdbCopy->total_segs);
-	
+
 	cdbCopySendData(cdbCopy, target_seg, msgbuf->data, msgbuf->len);
 }
 
@@ -7200,12 +7195,12 @@ CopyEolStrToType(CopyState cstate)
 	else if (pg_strcasecmp(cstate->eol_str, "crlf") == 0)
 	{
 		cstate->eol_type = EOL_CRNL;
-		
+
 	}
 	else /* error. must have been validated in CopyValidateControlChars() ! */
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("internal error in CopySetEolType. Trying to set NEWLINE %s", 
+				 errmsg("internal error in CopySetEolType. Trying to set NEWLINE %s",
 						 cstate->eol_str)));
 }
 
