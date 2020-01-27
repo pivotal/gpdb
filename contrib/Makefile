@@ -49,7 +49,7 @@ SUBDIRS = \
 #               seg         \
 #		tablefunc	\
 #		vacuumlo
-#		worker_spi 
+#		worker_spi
 
 # Greenplum-specific additions (to ease merge pain).
 SUBDIRS += \
@@ -80,6 +80,10 @@ ifeq ($(with_selinux),yes)
 SUBDIRS += sepgsql
 else
 ALWAYS_SUBDIRS += sepgsql
+endif
+
+ifeq ($(enable_pxf),yes)
+SUBDIRS += pxf_fdw
 endif
 
 # Missing:
