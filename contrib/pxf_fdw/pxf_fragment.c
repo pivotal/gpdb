@@ -325,20 +325,15 @@ FilterFragmentsForSegment(List *list)
 	if (!list)
 		elog(ERROR, "Parameter list is null in FilterFragmentsForSegment");
 
-	DistributedTransactionId xid = getDistributedTransactionId();
-
-	if (xid == InvalidDistributedTransactionId)
-		elog(ERROR, "Cannot get distributed transaction identifier in FilterFragmentsForSegment");
-
 	/*
 	 * to determine which segment S should process an element at a given index
 	 * I, use a randomized MOD function
 	 *
-	 * S = MOD(I + MOD(XID, N), N)
+	 * S = MOD(I + MOD(gp_session_id, N) + gp_command_count, N)
 	 *
 	 * which ensures more fair work distribution for small lists of just a few
-	 * elements across N segments global transaction ID is used as a
-	 * randomizer, as it is different for every query while being the same
+	 * elements across N segments global session ID and command count is used
+	 * as a randomizer, as it is different for every query while being the same
 	 * across all segments for a given query
 	 */
 
@@ -349,11 +344,11 @@ FilterFragmentsForSegment(List *list)
 	int			index = 0;
 	int			frag_index = 1;
 	int			numsegments = PXF_SEGMENT_COUNT;
-	int32		shift = xid % numsegments;
+	int32		shift = gp_session_id % numsegments;
 
 	for (current = list_head(list); current != NULL; index++)
 	{
-		if (PXF_SEGMENT_ID == (index + shift) % numsegments)
+		if (PXF_SEGMENT_ID == (index + shift + gp_command_count) % numsegments)
 		{
 			/*
 			 * current segment is the one that should process, keep the

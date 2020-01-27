@@ -211,8 +211,11 @@ pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 	 * Identify which attributes will need to be retrieved from the remote
 	 * server
 	 */
+#if (PG_VERSION_NUM <= 90500)
 	pull_varattnos((Node *) baserel->reltargetlist, baserel->relid, &fpinfo->attrs_used);
-
+#else
+	pull_varattnos((Node *) baserel->reltarget->exprs, baserel->relid, &fpinfo->attrs_used);
+#endif
 	foreach(lc, fpinfo->local_conds)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
@@ -285,7 +288,6 @@ pxfGetForeignPlan(PlannerInfo *root,
 				  List *scan_clauses,
 				  Plan *outer_plan)
 #else
-
 static ForeignScan *
 pxfGetForeignPlan(PlannerInfo *root,
 				  RelOptInfo *baserel,
@@ -297,7 +299,7 @@ pxfGetForeignPlan(PlannerInfo *root,
 {
 	Index		scan_relid = baserel->relid;
 	PxfFdwRelationInfo *fpinfo = (PxfFdwRelationInfo *) baserel->fdw_private;
-	List	   *fdw_private;
+	List	 *fdw_private;
 
 	elog(DEBUG5, "pxf_fdw: pxfGetForeignPlan starts on segment: %d", PXF_SEGMENT_ID);
 
@@ -330,7 +332,7 @@ pxfGetForeignPlan(PlannerInfo *root,
 							fdw_private
 #if PG_VERSION_NUM >= 90500
 							,NIL
-							,remote_exprs
+							,NIL
 							,outer_plan
 #endif
 		);
@@ -809,7 +811,11 @@ BeginCopyTo(Relation forrel, List *options)
 
 	Assert(RelationIsForeign(forrel));
 
+#if (PG_VERSION_NUM <= 90500)
 	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
+#else
+	cstate = BeginCopy(false, forrel, NULL, NULL, forrel->rd_id, NIL, options, NULL);
+#endif
 	cstate->dispatch_mode = COPY_DIRECT;
 
 	/*

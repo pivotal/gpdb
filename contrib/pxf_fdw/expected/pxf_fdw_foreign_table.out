@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/ERROR:  COPY quote available only in CSV mode/
+-- s/ERROR:  COPY quote available only in CSV mode/ERROR:  quote available only in CSV mode/
+-- end_matchsubs
 -- ===================================================================
 -- Validation for TABLE options
 -- ===================================================================

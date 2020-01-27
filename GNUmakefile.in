@@ -73,7 +73,6 @@ endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 

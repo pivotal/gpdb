@@ -29,8 +29,7 @@ deparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs)
 	*retrieved_attrs = NIL;
 
 	/* If there's a whole-row reference, we'll need all the columns. */
-	have_wholerow = bms_is_member(0 - FirstLowInvalidHeapAttributeNumber,
-								  attrs_used);
+	have_wholerow = bms_is_member(0 - FirstLowInvalidHeapAttributeNumber, attrs_used);
 
 	if (have_wholerow)
 		return;
