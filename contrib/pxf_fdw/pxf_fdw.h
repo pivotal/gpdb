@@ -17,6 +17,8 @@
 #ifndef PXF_FDW_H
 #define PXF_FDW_H
 
+#define PXF_SEGMENT_ID           GpIdentity.segindex
+#define PXF_SEGMENT_COUNT        getgpsegmentCount()
 #define PXF_FDW_DEFAULT_PROTOCOL "http"
 #define PXF_FDW_DEFAULT_HOST     "localhost"
 #define PXF_FDW_DEFAULT_PORT     5888
