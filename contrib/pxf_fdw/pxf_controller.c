@@ -97,22 +97,7 @@ PxfControllerRead(void *outbuf, int datasize, void *extra)
 {
 	size_t		n = 0;
 	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) extra;
-
-	while ((n = FillBuffer(pxfsstate, outbuf, datasize)) == 0)
-	{
-		/*
-		 * done processing all data for current segment - check if the
-		 * connection terminated with an error
-		 */
-		churl_read_check_connectivity(pxfsstate->churl_handle);
-
-		churl_download_restart(pxfsstate->churl_handle, pxfsstate->uri.data, pxfsstate->churl_headers);
-
-		/* read some bytes to make sure the connection is established */
-		churl_read_check_connectivity(pxfsstate->churl_handle);
-	}
-
-	return (int) n;
+	return (int) FillBuffer(pxfsstate, outbuf, datasize);
 }
 
 /*
