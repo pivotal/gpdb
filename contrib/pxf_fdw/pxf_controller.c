@@ -95,7 +95,6 @@ PxfControllerExportStart(PxfFdwModifyState *pxfmstate)
 int
 PxfControllerRead(void *outbuf, int datasize, void *extra)
 {
-	size_t		n = 0;
 	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) extra;
 	return (int) FillBuffer(pxfsstate, outbuf, datasize);
 }
