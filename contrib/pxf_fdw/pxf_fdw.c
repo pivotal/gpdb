@@ -169,9 +169,7 @@ enum FdwScanPrivateIndex
 	/* WHERE clauses to be sent to PXF (as a String node) */
 	FdwScanPrivateWhereClauses,
 	/* Integer list of attribute numbers retrieved by the SELECT */
-	FdwScanPrivateRetrievedAttrs,
-	/* List of fragments to be processed by the segments */
-	FdwScanPrivateFragmentList
+	FdwScanPrivateRetrievedAttrs
 };
 
 /*
@@ -368,7 +366,6 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
-	List* serializedFragmentList;
 	ForeignTable *rel = GetForeignTable(RelationGetRelid(node->ss.ss_currentRelation));
 
 	List	   *quals             = node->ss.ps.qual;
@@ -585,7 +582,7 @@ pxfExecForeignInsert(EState *estate,
 
 	StringInfo	fe_msgbuf = cstate->fe_msgbuf;
 
-	int			bytes_written = PxfBridgeWrite(pxfmstate, fe_msgbuf->data, fe_msgbuf->len);
+	int			bytes_written = PxfControllerWrite(pxfmstate, fe_msgbuf->data, fe_msgbuf->len);
 
 	if (bytes_written == -1)
 	{
@@ -621,7 +618,7 @@ pxfEndForeignModify(EState *estate,
 		return;
 
 	EndCopyFrom(pxfmstate->cstate);
-	PxfBridgeCleanup(pxfmstate);
+	PxfControllerCleanup(pxfmstate);
 
 	elog(DEBUG5, "pxf_fdw: pxfEndForeignModify ends on segment: %d", PXF_SEGMENT_ID);
 }
@@ -649,7 +646,7 @@ InitCopyState(PxfFdwScanState *pxfsstate)
 {
 	CopyState	cstate;
 
-	PxfBridgeImportStart(pxfsstate);
+	PxfControllerImportStart(pxfsstate);
 
 	/*
 	 * Create CopyState from FDW options.  We always acquire all columns, so
@@ -658,7 +655,7 @@ InitCopyState(PxfFdwScanState *pxfsstate)
 	cstate = BeginCopyFrom(pxfsstate->relation,
 						   NULL,
 						   false,	/* is_program */
-						   &PxfBridgeRead,	/* data_source_cb */
+						   &PxfControllerRead,	/* data_source_cb */
 						   pxfsstate,	/* data_source_cb_extra */
 						   NIL, /* attnamelist */
 						   pxfsstate->options->copy_options,	/* copy options */
@@ -718,7 +715,7 @@ InitCopyStateForModify(PxfFdwModifyState *pxfmstate)
 
 	copy_options = pxfmstate->options->copy_options;
 
-	PxfBridgeExportStart(pxfmstate);
+	PxfControllerExportStart(pxfmstate);
 
 	/*
 	 * Create CopyState from FDW options.  We always acquire all columns, so

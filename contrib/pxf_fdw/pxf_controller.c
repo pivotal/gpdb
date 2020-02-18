@@ -33,7 +33,7 @@ static size_t FillBuffer(PxfFdwScanState *pxfsstate, char *start, size_t size);
  * Clean up churl related data structures from the PXF FDW modify state.
  */
 void
-PxfBridgeCleanup(PxfFdwModifyState *pxfmstate)
+PxfControllerCleanup(PxfFdwModifyState *pxfmstate)
 {
 	if (pxfmstate == NULL)
 		return;
@@ -56,7 +56,7 @@ PxfBridgeCleanup(PxfFdwModifyState *pxfmstate)
  * Sets up data before starting import
  */
 void
-PxfBridgeImportStart(PxfFdwScanState *pxfsstate)
+PxfControllerImportStart(PxfFdwScanState *pxfsstate)
 {
 	pxfsstate->churl_headers = churl_headers_init();
 
@@ -77,7 +77,7 @@ PxfBridgeImportStart(PxfFdwScanState *pxfsstate)
  * Sets up data before starting export
  */
 void
-PxfBridgeExportStart(PxfFdwModifyState *pxfmstate)
+PxfControllerExportStart(PxfFdwModifyState *pxfmstate)
 {
 	BuildUriForWrite(pxfmstate);
 	pxfmstate->churl_headers = churl_headers_init();
@@ -93,7 +93,7 @@ PxfBridgeExportStart(PxfFdwModifyState *pxfmstate)
  * Reads data from the PXF server into the given buffer of a given size
  */
 int
-PxfBridgeRead(void *outbuf, int datasize, void *extra)
+PxfControllerRead(void *outbuf, int datasize, void *extra)
 {
 	size_t		n = 0;
 	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) extra;
@@ -119,14 +119,14 @@ PxfBridgeRead(void *outbuf, int datasize, void *extra)
  * Writes data from the given buffer of a given size to the PXF server
  */
 int
-PxfBridgeWrite(PxfFdwModifyState *pxfmstate, char *databuf, int datalen)
+PxfControllerWrite(PxfFdwModifyState *pxfmstate, char *databuf, int datalen)
 {
 	size_t		n = 0;
 
 	if (datalen > 0)
 	{
 		n = churl_write(pxfmstate->churl_handle, databuf, datalen);
-		elog(DEBUG5, "pxf PxfBridgeWrite: segment %d wrote %zu bytes to %s", PXF_SEGMENT_ID, n, pxfmstate->options->resource);
+		elog(DEBUG5, "pxf PxfControllerWrite: segment %d wrote %zu bytes to %s", PXF_SEGMENT_ID, n, pxfmstate->options->resource);
 	}
 
 	return (int) n;
