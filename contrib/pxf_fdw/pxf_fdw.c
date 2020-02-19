@@ -135,6 +135,9 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 	fdw_routine->EndForeignModify = pxfEndForeignModify;
 	fdw_routine->IsForeignRelUpdatable = pxfIsForeignRelUpdatable;
 
+	/* Support functions for ANALYZE */
+//	fdw_routine->AnalyzeForeignTable = pxfAnalyzeForeignTable;
+
 	PG_RETURN_POINTER(fdw_routine);
 }
 
@@ -345,7 +348,42 @@ pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
 	elog(DEBUG5, "pxf_fdw: pxfExplainForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
-	/* TODO: make this a meaningful callback */
+	List *fdw_private;
+	char *filter_str;
+	List *retrieved_attrs;
+	int retrieved_attrs_length, counter;
+
+	if (es->verbose)
+	{
+		fdw_private            = ((ForeignScan *) node->ss.ps.plan)->fdw_private;
+		filter_str             = strVal(list_nth(fdw_private, FdwScanPrivateWhereClauses));
+		retrieved_attrs        = (List *) list_nth(fdw_private, FdwScanPrivateRetrievedAttrs);
+		retrieved_attrs_length = list_length(retrieved_attrs);
+
+		if (filter_str)
+		{
+			ExplainPropertyText("Serialized filter string", filter_str, es);
+		}
+
+		if (retrieved_attrs_length > 0)
+		{
+			StringInfoData columnProjection;
+			initStringInfo(&columnProjection);
+
+			ListCell *lc1 = NULL;
+			foreach_with_count(lc1, retrieved_attrs, counter)
+			{
+				int attno = lfirst_int(lc1);
+				appendStringInfo(&columnProjection, "%d", attno);
+				if (counter < retrieved_attrs_length - 1) {
+					appendStringInfo(&columnProjection, ", ");
+				}
+			}
+
+			ExplainPropertyText("Column projection attributes", columnProjection.data, es);
+			resetStringInfo(&columnProjection);
+		}
+	}
 
 	elog(DEBUG5, "pxf_fdw: pxfExplainForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
@@ -383,7 +421,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 
 	/* retrieve fdw-private information from pxfGetForeignPlan() */
 	char *filter_str              = strVal(list_nth(foreignScan->fdw_private, FdwScanPrivateWhereClauses));
-	List *retrieved_attrs = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateRetrievedAttrs);
+	List *retrieved_attrs         = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateRetrievedAttrs);
 
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
