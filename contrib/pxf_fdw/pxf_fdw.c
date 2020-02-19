@@ -512,7 +512,21 @@ pxfEndForeignScan(ForeignScanState *node)
 
 	/* if pxfsstate is NULL, we are in EXPLAIN; nothing to do */
 	if (pxfsstate)
+	{
 		EndCopyFrom(pxfsstate->cstate);
+
+		if (pxfsstate->churl_handle)
+		{
+			churl_cleanup(pxfsstate->churl_handle, false);
+			pxfsstate->churl_handle = NULL;
+		}
+
+		if (pxfsstate->churl_headers)
+		{
+			churl_headers_cleanup(pxfsstate->churl_headers);
+			pxfsstate->churl_headers = NULL;
+		}
+	}
 
 	elog(DEBUG5, "pxf_fdw: pxfEndForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
