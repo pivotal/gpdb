@@ -368,6 +368,12 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 
 	ForeignTable *rel = GetForeignTable(RelationGetRelid(node->ss.ss_currentRelation));
 
+	/*
+	 * Master does not scan when the exec location is all segments
+	 */
+	if (rel->exec_location == FTEXECLOCATION_ALL_SEGMENTS && Gp_role == GP_ROLE_DISPATCH)
+		return;
+
 	List	   *quals             = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
 	PxfFdwScanState *pxfsstate    = NULL;
@@ -378,14 +384,6 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	/* retrieve fdw-private information from pxfGetForeignPlan() */
 	char *filter_str              = strVal(list_nth(foreignScan->fdw_private, FdwScanPrivateWhereClauses));
 	List *retrieved_attrs = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateRetrievedAttrs);
-
-	if (rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS || Gp_role == GP_ROLE_DISPATCH)
-	{
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			return;
-		}
-	}
 
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
