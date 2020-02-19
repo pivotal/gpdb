@@ -726,7 +726,7 @@ pxfAnalyzeForeignTable(Relation relation,
 					   AcquireSampleRowsFunc *func,
 					   BlockNumber *totalpages)
 {
-	elog(DEBUG2, "pxf_fdw: pxfAnalyzeForeignTable starts on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: pxfAnalyzeForeignTable starts on segment: %d", PXF_SEGMENT_ID);
 	ForeignTable *table;
 	UserMapping *user;
 	long		total_size = 0;
@@ -756,7 +756,7 @@ pxfAnalyzeForeignTable(Relation relation,
 	 */
 	*totalpages = total_size / BLCKSZ;
 
-	elog(DEBUG2, "pxf_fdw: pxfAnalyzeForeignTable ends on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: pxfAnalyzeForeignTable ends on segment: %d", PXF_SEGMENT_ID);
 	return true;
 }
 
@@ -782,7 +782,7 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
 						 double *totalrows,
 						 double *totaldeadrows)
 {
-	elog(DEBUG2, "pxf_fdw: pxfAcquireSampleRowsFunc starts on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: pxfAcquireSampleRowsFunc starts on segment: %d", PXF_SEGMENT_ID);
 	PxfFdwAnalyzeState astate;
 	ForeignTable *table;
 	ForeignServer *server;
@@ -909,7 +909,7 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
 					RelationGetRelationName(relation),
 					astate.samplerows, astate.numrows)));
 
-	elog(DEBUG2, "pxf_fdw: pxfAcquireSampleRowsFunc ends on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: pxfAcquireSampleRowsFunc ends on segment: %d", PXF_SEGMENT_ID);
 	return astate.numrows;
 }
 
