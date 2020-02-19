@@ -18,6 +18,7 @@
 #include "commands/copy.h"
 #include "commands/defrem.h"
 #include "commands/explain.h"
+#include "commands/vacuum.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
 #include "nodes/pg_list.h"
@@ -67,6 +68,9 @@ static void pxfReScanForeignScan(ForeignScanState *node);
 
 static void pxfEndForeignScan(ForeignScanState *node);
 
+/* Analyze */
+static bool pxfAnalyzeForeignTable(Relation relation, AcquireSampleRowsFunc *func, BlockNumber *totalpages);
+
 /* Foreign updates */
 static void pxfBeginForeignModify(ModifyTableState *mtstate, ResultRelInfo *resultRelInfo, List *fdw_private, int subplan_index, int eflags);
 static TupleTableSlot *pxfExecForeignInsert(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, TupleTableSlot *planSlot);
@@ -75,12 +79,6 @@ static void pxfEndForeignModify(EState *estate, ResultRelInfo *resultRelInfo);
 
 static int	pxfIsForeignRelUpdatable(Relation rel);
 
-/*
- * Helper functions
- */
-static void InitCopyState(PxfFdwScanState *pxfsstate);
-static void InitCopyStateForModify(PxfFdwModifyState *pxfmstate);
-static CopyState BeginCopyTo(Relation forrel, List *options);
 
 /*
  * Foreign-data wrapper handler functions:
@@ -136,7 +134,7 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 	fdw_routine->IsForeignRelUpdatable = pxfIsForeignRelUpdatable;
 
 	/* Support functions for ANALYZE */
-//	fdw_routine->AnalyzeForeignTable = pxfAnalyzeForeignTable;
+	fdw_routine->AnalyzeForeignTable = pxfAnalyzeForeignTable;
 
 	PG_RETURN_POINTER(fdw_routine);
 }
@@ -153,6 +151,28 @@ typedef struct PxfFdwRelationInfo
 	/* Bitmap of attr numbers we need to fetch from the remote server. */
 	Bitmapset  *attrs_used;
 }			PxfFdwRelationInfo;
+
+/*
+ * Workspace for analyzing a foreign table.
+ */
+typedef struct PxfFdwAnalyzeState
+{
+	Relation	rel;			/* relcache entry for the foreign table */
+	List	   *retrieved_attrs;	/* attr numbers retrieved by query */
+
+	/* collected sample rows */
+	HeapTuple  *rows;			/* array of size targrows */
+	int			targrows;		/* target # of sample rows */
+	int			numrows;		/* # of sample rows collected */
+
+	/* for random sampling */
+	double		samplerows;		/* # of rows fetched */
+	double		rowstoskip;		/* # of rows to skip before next sample */
+	double		rstate;			/* random state */
+
+	/* working memory contexts */
+	MemoryContext anl_cxt;		/* context for per-analyze lifespan data */
+} PxfFdwAnalyzeState;
 
 /*
  * Indexes of FDW-private information stored in fdw_private lists.
@@ -174,6 +194,15 @@ enum FdwScanPrivateIndex
 	/* Integer list of attribute numbers retrieved by the SELECT */
 	FdwScanPrivateRetrievedAttrs
 };
+
+/*
+ * Helper functions
+ */
+static void InitCopyState(PxfFdwScanState *pxfsstate);
+static void InitCopyStateForModify(PxfFdwModifyState *pxfmstate);
+static CopyState BeginCopyTo(Relation forrel, List *options);
+static int pxfAcquireSampleRowsFunc(Relation relation, int elevel, HeapTuple *rows, int targrows, double *totalrows, double *totaldeadrows);
+static void analyze_row_processor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate);
 
 /*
  * GetForeignRelSize
@@ -684,8 +713,269 @@ pxfIsForeignRelUpdatable(Relation rel)
 {
 	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable starts on segment: %d", PXF_SEGMENT_ID);
 	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable ends on segment: %d", PXF_SEGMENT_ID);
-	/* Only INSERTs are allowed at the moment */
+	/* Only INSERT is allowed at the moment */
 	return 1u << (unsigned int) CMD_INSERT | 0u << (unsigned int) CMD_UPDATE | 0u << (unsigned int) CMD_DELETE;
+}
+
+/*
+ * pxfAnalyzeForeignTable
+ *		Test whether analyzing this foreign table is supported
+ */
+static bool
+pxfAnalyzeForeignTable(Relation relation,
+					   AcquireSampleRowsFunc *func,
+					   BlockNumber *totalpages)
+{
+	elog(DEBUG2, "pxf_fdw: pxfAnalyzeForeignTable starts on segment: %d", PXF_SEGMENT_ID);
+	ForeignTable *table;
+	UserMapping *user;
+	long		total_size = 0;
+
+	/* Return the row-analysis function pointer */
+	*func = pxfAcquireSampleRowsFunc;
+
+	/*
+	 * Get the connection to use.  We do the remote access as the table's
+	 * owner, even if the ANALYZE was started by some other user.
+	 */
+	table = GetForeignTable(RelationGetRelid(relation));
+	user = GetUserMapping(relation->rd_rel->relowner, table->serverid);
+
+	/*
+	 * Ask PXF to calculate the total size of the dataset on the external
+	 * system, this can be exact (in the case of HCFS) or inexact (in the case
+	 * of JDBC)
+	 */
+	/* TODO: get the total_size from PXF */
+	/* total_size = PxfAnalyzeRetrieveTotalSize(table, user); */
+	total_size = 0;
+
+	/*
+	 * The total number of pages equals to the total size of the dataset,
+	 * divided by Postgres's block size
+	 */
+	*totalpages = total_size / BLCKSZ;
+
+	elog(DEBUG2, "pxf_fdw: pxfAnalyzeForeignTable ends on segment: %d", PXF_SEGMENT_ID);
+	return true;
+}
+
+/*
+ * Acquire a random sample of rows from foreign table managed by pxf_fdw.
+ *
+ * We fetch the whole table from the remote side and pick out some sample rows.
+ *
+ * Selected rows are returned in the caller-allocated array rows[],
+ * which must have at least targrows entries.
+ * The actual number of rows selected is returned as the function result.
+ * We also count the total number of rows in the table and return it into
+ * *totalrows.  Note that *totaldeadrows is always set to 0.
+ *
+ * Note that the returned list of rows is not always in order by physical
+ * position in the table.  Therefore, correlation estimates derived later
+ * may be meaningless, but it's OK because we don't use the estimates
+ * currently (the planner only pays attention to correlation for indexscans).
+ */
+static int
+pxfAcquireSampleRowsFunc(Relation relation, int elevel,
+						 HeapTuple *rows, int targrows,
+						 double *totalrows,
+						 double *totaldeadrows)
+{
+	elog(DEBUG2, "pxf_fdw: pxfAcquireSampleRowsFunc starts on segment: %d", PXF_SEGMENT_ID);
+	PxfFdwAnalyzeState astate;
+	ForeignTable *table;
+	ForeignServer *server;
+	UserMapping *user;
+
+	/* Initialize workspace state */
+	astate.rel = relation;
+	astate.rows = rows;
+	astate.targrows = targrows;
+	astate.numrows = 0;
+	astate.samplerows = 0;
+	astate.rowstoskip = -1;		/* -1 means not set yet */
+	astate.rstate = anl_init_selection_state(targrows);
+
+	/* Remember ANALYZE context */
+	astate.anl_cxt = CurrentMemoryContext;
+
+	/*
+	 *
+	 */
+	table = GetForeignTable(RelationGetRelid(relation));
+	server = GetForeignServer(table->serverid);
+	user = GetUserMapping(relation->rd_rel->relowner, table->serverid);
+
+	// TODO: read targrows rows
+	// TODO: read total row count on the external system
+
+//	/* In what follows, do not risk leaking any PGresults. */
+//	PG_TRY();
+//			{
+//				char		fetch_sql[64];
+//				int			fetch_size;
+//				ListCell   *lc;
+//
+//				res = pgfdw_exec_query(conn, sql.data);
+//				if (PQresultStatus(res) != PGRES_COMMAND_OK)
+//					pgfdw_report_error(ERROR, res, conn, false, sql.data);
+//				PQclear(res);
+//				res = NULL;
+//
+//				/*
+//				 * Determine the fetch size.  The default is arbitrary, but shouldn't
+//				 * be enormous.
+//				 */
+//				fetch_size = 100;
+//				foreach(lc, server->options)
+//				{
+//					DefElem    *def = (DefElem *) lfirst(lc);
+//
+//					if (strcmp(def->defname, "fetch_size") == 0)
+//					{
+//						fetch_size = strtol(defGetString(def), NULL, 10);
+//						break;
+//					}
+//				}
+//				foreach(lc, table->options)
+//				{
+//					DefElem    *def = (DefElem *) lfirst(lc);
+//
+//					if (strcmp(def->defname, "fetch_size") == 0)
+//					{
+//						fetch_size = strtol(defGetString(def), NULL, 10);
+//						break;
+//					}
+//				}
+//
+//				/* Construct command to fetch rows from remote. */
+//				snprintf(fetch_sql, sizeof(fetch_sql), "FETCH %d FROM c%u",
+//				         fetch_size, cursor_number);
+//
+//				/* Retrieve and process rows a batch at a time. */
+//				for (;;)
+//				{
+//					int			numrows;
+//					int			i;
+//
+//					/* Allow users to cancel long query */
+//					CHECK_FOR_INTERRUPTS();
+//
+//					/*
+//					 * XXX possible future improvement: if rowstoskip is large, we
+//					 * could issue a MOVE rather than physically fetching the rows,
+//					 * then just adjust rowstoskip and samplerows appropriately.
+//					 */
+//
+//					/* Fetch some rows */
+//					res = pgfdw_exec_query(conn, fetch_sql);
+//					/* On error, report the original query, not the FETCH. */
+//					if (PQresultStatus(res) != PGRES_TUPLES_OK)
+//						pgfdw_report_error(ERROR, res, conn, false, sql.data);
+//
+//					/* Process whatever we got. */
+//					numrows = PQntuples(res);
+//					for (i = 0; i < numrows; i++)
+//						analyze_row_processor(res, i, &astate);
+//
+//					PQclear(res);
+//					res = NULL;
+//
+//					/* Must be EOF if we didn't get all the rows requested. */
+//					if (numrows < fetch_size)
+//						break;
+//				}
+//			}
+//		PG_CATCH();
+//			{
+//				if (res)
+//					PQclear(res);
+//				PG_RE_THROW();
+//			}
+//	PG_END_TRY();
+
+	/* We assume that we have no dead tuples. */
+	*totaldeadrows = 0.0;
+
+	/* We've retrieved all living tuples from foreign server. */
+	*totalrows = astate.samplerows;
+
+	/*
+	 * Emit some interesting relation info
+	 */
+	ereport(elevel,
+			(errmsg("\"%s\": table contains %.0f rows, %d rows in sample",
+					RelationGetRelationName(relation),
+					astate.samplerows, astate.numrows)));
+
+	elog(DEBUG2, "pxf_fdw: pxfAcquireSampleRowsFunc ends on segment: %d", PXF_SEGMENT_ID);
+	return astate.numrows;
+}
+
+/*
+ * Collect sample rows from the result of query.
+ *	 - Use all tuples in sample until target # of samples are collected.
+ *	 - Subsequently, replace already-sampled tuples randomly.
+ */
+static void
+analyze_row_processor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate)
+{
+	int			targrows = astate->targrows;
+	int			pos;			/* array index to store tuple in */
+	MemoryContext oldcontext;
+
+	/* Always increment sample row counter. */
+	astate->samplerows += 1;
+
+	/*
+	 * Determine the slot where this sample row should be stored.  Set pos to
+	 * negative value to indicate the row should be skipped.
+	 */
+	if (astate->numrows < targrows)
+	{
+		/* First targrows rows are always included into the sample */
+		pos = astate->numrows++;
+	}
+	else
+	{
+		/*
+		 * Now we start replacing tuples in the sample until we reach the end
+		 * of the relation.  Same algorithm as in acquire_sample_rows in
+		 * analyze.c; see Jeff Vitter's paper.
+		 */
+		if (astate->rowstoskip < 0)
+			astate->rowstoskip = anl_get_next_S(astate->samplerows, targrows,
+												&astate->rstate);
+
+		if (astate->rowstoskip <= 0)
+		{
+			/* Choose a random reservoir element to replace. */
+			pos = (int) (targrows * anl_random_fract());
+			Assert(pos >= 0 && pos < targrows);
+			heap_freetuple(astate->rows[pos]);
+		}
+		else
+		{
+			/* Skip this tuple. */
+			pos = -1;
+		}
+
+		astate->rowstoskip -= 1;
+	}
+
+	if (pos >= 0)
+	{
+		/*
+		 * Create sample tuple from current result row, and store it in the
+		 * position determined above.  The tuple has to be created in anl_cxt.
+		 */
+		oldcontext = MemoryContextSwitchTo(astate->anl_cxt);
+
+		astate->rows[pos] = ExecCopySlotHeapTuple(slot);
+
+		MemoryContextSwitchTo(oldcontext);
+	}
 }
 
 /*

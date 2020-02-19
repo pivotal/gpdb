@@ -141,9 +141,13 @@ AddAlignmentSizeHttpHeader(CHURL_HEADERS headers)
 static void
 AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel)
 {
+	Oid		relid = RelationGetRelid(rel);
 	char		long_number[sizeof(int32) * 8];
 	StringInfoData formatter;
 	TupleDesc	tuple;
+	char	   *colname;
+	List	   *options;
+	ListCell   *lc;
 
 	initStringInfo(&formatter);
 
