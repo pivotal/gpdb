@@ -160,7 +160,23 @@ AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel)
 		/* Add a key/value pair for attribute name */
 		resetStringInfo(&formatter);
 		appendStringInfo(&formatter, "X-GP-ATTR-NAME%u", i);
-		churl_headers_append(headers, formatter.data, tuple->attrs[i]->attname.data);
+
+		/* Use attribute name or column_name option. */
+		colname = NameStr(tuple->attrs[i]->attname);
+		options = GetForeignColumnOptions(relid, i + 1);
+
+		foreach(lc, options)
+		{
+			DefElem    *def = (DefElem *) lfirst(lc);
+
+			if (strcmp(def->defname, "column_name") == 0)
+			{
+				colname = defGetString(def);
+				break;
+			}
+		}
+
+		churl_headers_append(headers, formatter.data, colname);
 
 		/* Add a key/value pair for attribute type */
 		resetStringInfo(&formatter);
