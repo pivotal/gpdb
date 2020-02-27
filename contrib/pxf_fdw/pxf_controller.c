@@ -157,7 +157,14 @@ FillBuffer(PxfFdwScanState *pxfsstate, char *start, size_t size)
 	{
 		n = churl_read(pxfsstate->churl_handle, ptr, end - ptr);
 		if (n == 0)
+		{
+			/*
+			 * done processing all data - check if the
+			 * connection terminated with an error
+			 */
+			churl_read_check_connectivity(pxfsstate->churl_handle);
 			break;
+		}
 
 		ptr += n;
 	}

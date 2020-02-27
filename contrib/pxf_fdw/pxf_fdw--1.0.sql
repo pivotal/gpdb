@@ -57,3 +57,30 @@ CREATE FOREIGN DATA WRAPPER file_pxf_fdw
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'localfile', mpp_execute 'all segments' );
+
+COMMENT ON FOREIGN DATA WRAPPER jdbc_pxf_fdw
+IS 'PXF JDBC foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER hdfs_pxf_fdw
+    IS 'PXF HDFS foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER hive_pxf_fdw
+    IS 'PXF Hive foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER hbase_pxf_fdw
+    IS 'PXF HBase foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER s3_pxf_fdw
+    IS 'PXF AWS S3 foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER gs_pxf_fdw
+    IS 'PXF Google Cloud Storage (GS) foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER adl_pxf_fdw
+    IS 'PXF Azure Data Lake (ADL) foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER wasbs_pxf_fdw
+    IS 'PXF Windows Azure Storage Blob (WASB) foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER file_pxf_fdw
+    IS 'PXF File foreign data wrapper';

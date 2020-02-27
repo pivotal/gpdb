@@ -28,6 +28,7 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 #include "parser/parsetree.h"
+#include "storage/ipc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
@@ -35,37 +36,91 @@ PG_MODULE_MAGIC;
 
 #define DEFAULT_PXF_FDW_STARTUP_COST   50000
 
+typedef struct PxfFdwRelationInfo
+{
+	/* baserestrictinfo clauses, broken down into safe and unsafe subsets. */
+	List	   *remote_conds;
+	List	   *local_conds;
+
+	/* List of attributes (columns) that we need to get */
+	List	   *retrieved_attrs;
+
+	/* Bitmap of attr numbers we need to fetch from the remote server. */
+	Bitmapset  *attrs_used;
+}			PxfFdwRelationInfo;
+
+/*
+ * Workspace for analyzing a foreign table.
+ */
+typedef struct PxfFdwAnalyzeState
+{
+	Relation	rel;			/* relcache entry for the foreign table */
+	List	   *retrieved_attrs;	/* attr numbers retrieved by query */
+
+	/* collected sample rows */
+	HeapTuple  *rows;			/* array of size targrows */
+	int			targrows;		/* target # of sample rows */
+	int			numrows;		/* # of sample rows collected */
+
+	/* for random sampling */
+	double		samplerows;		/* # of rows fetched */
+	double		rowstoskip;		/* # of rows to skip before next sample */
+	double		rstate;			/* random state */
+
+	/* working memory contexts */
+	MemoryContext anl_cxt;		/* context for per-analyze lifespan data */
+} PxfFdwAnalyzeState;
+
+/*
+ * Indexes of FDW-private information stored in fdw_private lists.
+ *
+ * We store various information in ForeignScan.fdw_private to pass it from
+ * planner to executor.  Currently we store:
+ *
+ * 1) WHERE clause text to be sent to the remote server
+ * 2) Integer list of attribute numbers retrieved by the SELECT
+ *
+ * These items are indexed with the enum FdwScanPrivateIndex, so an item
+ * can be fetched with list_nth().  For example, to get the WHERE clauses:
+ *		sql = strVal(list_nth(fdw_private, FdwScanPrivateWhereClauses));
+ */
+enum FdwScanPrivateIndex
+{
+	/* WHERE clauses to be sent to PXF (as a String node) */
+	FdwScanPrivateWhereClauses,
+	/* Integer list of attribute numbers retrieved by the SELECT */
+	FdwScanPrivateRetrievedAttrs
+};
+
 extern Datum pxf_fdw_handler(PG_FUNCTION_ARGS);
+
+/*
+ * on-load initializer
+ */
+extern PGDLLEXPORT void _PG_init(void);
 
 /*
  * SQL functions
  */
 PG_FUNCTION_INFO_V1(pxf_fdw_handler);
+PG_FUNCTION_INFO_V1(pxf_fdw_validator);
 
 /*
  * FDW functions declarations
  */
 static void pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid);
-
 static void pxfGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid);
 
 #if (PG_VERSION_NUM <= 90500)
-
-static ForeignScan *pxfGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid, ForeignPath *best_path, List *tlist,
-									  List *scan_clauses);
-
+static ForeignScan *pxfGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid, ForeignPath *best_path, List *tlist, List *scan_clauses);
 #else
 static ForeignScan *pxfGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid, ForeignPath *best_path, List *tlist, List *scan_clauses, Plan *outer_plan);
 #endif
 
 static void pxfExplainForeignScan(ForeignScanState *node, ExplainState *es);
-
 static void pxfBeginForeignScan(ForeignScanState *node, int eflags);
-
 static TupleTableSlot *pxfIterateForeignScan(ForeignScanState *node);
-
 static void pxfReScanForeignScan(ForeignScanState *node);
-
 static void pxfEndForeignScan(ForeignScanState *node);
 
 /* Analyze */
@@ -74,11 +129,18 @@ static bool pxfAnalyzeForeignTable(Relation relation, AcquireSampleRowsFunc *fun
 /* Foreign updates */
 static void pxfBeginForeignModify(ModifyTableState *mtstate, ResultRelInfo *resultRelInfo, List *fdw_private, int subplan_index, int eflags);
 static TupleTableSlot *pxfExecForeignInsert(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, TupleTableSlot *planSlot);
-
 static void pxfEndForeignModify(EState *estate, ResultRelInfo *resultRelInfo);
-
 static int	pxfIsForeignRelUpdatable(Relation rel);
 
+/*
+ * Helper functions
+ */
+static void InitCopyState(PxfFdwScanState *pxfsstate);
+static void InitCopyStateForModify(PxfFdwModifyState *pxfmstate);
+static CopyState BeginCopyTo(Relation forrel, List *options);
+static int PxfAcquireSampleRowsFunc(Relation relation, int elevel, HeapTuple *rows, int targrows, double *totalrows, double *totaldeadrows);
+static void AnalyzeRowProcessor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate);
+static void PxfExitHook(int code, Datum arg);
 
 /*
  * Foreign-data wrapper handler functions:
@@ -139,70 +201,25 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(fdw_routine);
 }
 
-typedef struct PxfFdwRelationInfo
-{
-	/* baserestrictinfo clauses, broken down into safe and unsafe subsets. */
-	List	   *remote_conds;
-	List	   *local_conds;
-
-	/* List of attributes (columns) that we need to get */
-	List	   *retrieved_attrs;
-
-	/* Bitmap of attr numbers we need to fetch from the remote server. */
-	Bitmapset  *attrs_used;
-}			PxfFdwRelationInfo;
-
 /*
- * Workspace for analyzing a foreign table.
+ * _PG_init
+ * 		Library load-time initialization.
+ * 		Sets PxfExitHook() callback for backend shutdown.
  */
-typedef struct PxfFdwAnalyzeState
+void
+_PG_init(void)
 {
-	Relation	rel;			/* relcache entry for the foreign table */
-	List	   *retrieved_attrs;	/* attr numbers retrieved by query */
+//	if ((pgver >= 90600 && pgver <= 90608)
+//		|| (pgver >= 100000 && pgver <= 100003))
+//		ereport(ERROR,
+//		        (errcode(ERRCODE_EXTERNAL_ROUTINE_INVOCATION_EXCEPTION),
+//			        errmsg("PostgreSQL version \"%s\" not supported by pxf_fdw",
+//			               GetConfigOptionByName("server_version", NULL)),
+//			        errhint("You'll have to update PostgreSQL to a later minor release.")));
 
-	/* collected sample rows */
-	HeapTuple  *rows;			/* array of size targrows */
-	int			targrows;		/* target # of sample rows */
-	int			numrows;		/* # of sample rows collected */
-
-	/* for random sampling */
-	double		samplerows;		/* # of rows fetched */
-	double		rowstoskip;		/* # of rows to skip before next sample */
-	double		rstate;			/* random state */
-
-	/* working memory contexts */
-	MemoryContext anl_cxt;		/* context for per-analyze lifespan data */
-} PxfFdwAnalyzeState;
-
-/*
- * Indexes of FDW-private information stored in fdw_private lists.
- *
- * We store various information in ForeignScan.fdw_private to pass it from
- * planner to executor.  Currently we store:
- *
- * 1) WHERE clause text to be sent to the remote server
- * 2) Integer list of attribute numbers retrieved by the SELECT
- *
- * These items are indexed with the enum FdwScanPrivateIndex, so an item
- * can be fetched with list_nth().  For example, to get the WHERE clauses:
- *		sql = strVal(list_nth(fdw_private, FdwScanPrivateWhereClauses));
- */
-enum FdwScanPrivateIndex
-{
-	/* WHERE clauses to be sent to PXF (as a String node) */
-	FdwScanPrivateWhereClauses,
-	/* Integer list of attribute numbers retrieved by the SELECT */
-	FdwScanPrivateRetrievedAttrs
-};
-
-/*
- * Helper functions
- */
-static void InitCopyState(PxfFdwScanState *pxfsstate);
-static void InitCopyStateForModify(PxfFdwModifyState *pxfmstate);
-static CopyState BeginCopyTo(Relation forrel, List *options);
-static int pxfAcquireSampleRowsFunc(Relation relation, int elevel, HeapTuple *rows, int targrows, double *totalrows, double *totaldeadrows);
-static void analyze_row_processor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate);
+	/* register an exit hook */
+	on_proc_exit(&PxfExitHook, PointerGetDatum(NULL));
+}
 
 /*
  * GetForeignRelSize
@@ -563,7 +580,7 @@ pxfReScanForeignScan(ForeignScanState *node)
 static void
 pxfEndForeignScan(ForeignScanState *node)
 {
-	elog(DEBUG5, "pxf_fdw: pxfEndForeignScan starts on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG1, "pxf_fdw: pxfEndForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
 	ForeignScan *foreignScan = (ForeignScan *) node->ss.ps.plan;
 	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) node->fdw_state;
@@ -593,7 +610,7 @@ pxfEndForeignScan(ForeignScanState *node)
 		}
 	}
 
-	elog(DEBUG5, "pxf_fdw: pxfEndForeignScan ends on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG1, "pxf_fdw: pxfEndForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
 
 /*
@@ -732,7 +749,7 @@ pxfAnalyzeForeignTable(Relation relation,
 	long		total_size = 0;
 
 	/* Return the row-analysis function pointer */
-	*func = pxfAcquireSampleRowsFunc;
+	*func = PxfAcquireSampleRowsFunc;
 
 	/*
 	 * Get the connection to use.  We do the remote access as the table's
@@ -756,6 +773,13 @@ pxfAnalyzeForeignTable(Relation relation,
 	 */
 	*totalpages = total_size / BLCKSZ;
 
+	/*
+	 * Must return at least 1 so that we can tell later on that
+	 * pg_class.relpages is not default.
+	 */
+	if (*totalpages < 1)
+		*totalpages = 1;
+
 	elog(DEBUG5, "pxf_fdw: pxfAnalyzeForeignTable ends on segment: %d", PXF_SEGMENT_ID);
 	return true;
 }
@@ -777,12 +801,12 @@ pxfAnalyzeForeignTable(Relation relation,
  * currently (the planner only pays attention to correlation for indexscans).
  */
 static int
-pxfAcquireSampleRowsFunc(Relation relation, int elevel,
-						 HeapTuple *rows, int targrows,
-						 double *totalrows,
-						 double *totaldeadrows)
+PxfAcquireSampleRowsFunc(Relation relation, int elevel,
+                         HeapTuple *rows, int targrows,
+                         double *totalrows,
+                         double *totaldeadrows)
 {
-	elog(DEBUG5, "pxf_fdw: pxfAcquireSampleRowsFunc starts on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG2, "pxf_fdw: PxfAcquireSampleRowsFunc starts on segment: %d. Sample %d rows", PXF_SEGMENT_ID, targrows);
 	PxfFdwAnalyzeState astate;
 	ForeignTable *table;
 	ForeignServer *server;
@@ -806,6 +830,17 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
 	table = GetForeignTable(RelationGetRelid(relation));
 	server = GetForeignServer(table->serverid);
 	user = GetUserMapping(relation->rd_rel->relowner, table->serverid);
+
+//	*totalRows = PxfAnalyzeRetrieveTotalRows(table, user);
+//
+//	if (*totalpages < targrows)
+//	{
+//		// PXF Scan the entire table as the user that owns the table
+//	}
+//	else
+//	{
+//		// Sample rows
+//	}
 
 	// TODO: read targrows rows
 	// TODO: read total row count on the external system
@@ -877,7 +912,7 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
 //					/* Process whatever we got. */
 //					numrows = PQntuples(res);
 //					for (i = 0; i < numrows; i++)
-//						analyze_row_processor(res, i, &astate);
+//						AnalyzeRowProcessor(res, i, &astate);
 //
 //					PQclear(res);
 //					res = NULL;
@@ -909,7 +944,7 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
 					RelationGetRelationName(relation),
 					astate.samplerows, astate.numrows)));
 
-	elog(DEBUG5, "pxf_fdw: pxfAcquireSampleRowsFunc ends on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: PxfAcquireSampleRowsFunc ends on segment: %d", PXF_SEGMENT_ID);
 	return astate.numrows;
 }
 
@@ -919,7 +954,7 @@ pxfAcquireSampleRowsFunc(Relation relation, int elevel,
  *	 - Subsequently, replace already-sampled tuples randomly.
  */
 static void
-analyze_row_processor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate)
+AnalyzeRowProcessor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate)
 {
 	int			targrows = astate->targrows;
 	int			pos;			/* array index to store tuple in */
@@ -1137,4 +1172,14 @@ BeginCopyTo(Relation forrel, List *options)
 														cstate->enc_conversion_proc);
 
 	return cstate;
+}
+
+/*
+ * exitHook
+ * 		Close all Oracle connections on process exit.
+ */
+static void
+PxfExitHook(int code, Datum arg)
+{
+	elog(DEBUG1, "pxf_fdw: PxfExitHook called");
 }

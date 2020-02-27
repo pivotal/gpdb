@@ -107,11 +107,6 @@ static const struct PxfFdwOption valid_copy_options[] = {
 extern Datum pxf_fdw_validator(PG_FUNCTION_ARGS);
 
 /*
- * SQL functions
- */
-PG_FUNCTION_INFO_V1(pxf_fdw_validator);
-
-/*
  * Helper functions
  */
 static Datum ValidateCopyOptions(List *options_list, Oid catalog);
