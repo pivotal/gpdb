@@ -140,7 +140,7 @@ static void InitCopyStateForModify(PxfFdwModifyState *pxfmstate);
 static CopyState BeginCopyTo(Relation forrel, List *options);
 static int PxfAcquireSampleRowsFunc(Relation relation, int elevel, HeapTuple *rows, int targrows, double *totalrows, double *totaldeadrows);
 static void AnalyzeRowProcessor(TupleTableSlot *slot, PxfFdwAnalyzeState *astate);
-static void PxfExitHook(int code, Datum arg);
+static void PxfAbortCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel, void *arg);
 
 /*
  * Foreign-data wrapper handler functions:
@@ -216,9 +216,6 @@ _PG_init(void)
 //			        errmsg("PostgreSQL version \"%s\" not supported by pxf_fdw",
 //			               GetConfigOptionByName("server_version", NULL)),
 //			        errhint("You'll have to update PostgreSQL to a later minor release.")));
-
-	/* register an exit hook */
-	on_proc_exit(&PxfExitHook, PointerGetDatum(NULL));
 }
 
 /*
@@ -484,6 +481,11 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 
 	InitCopyState(pxfsstate);
 	node->fdw_state = (void *) pxfsstate;
+
+	/*
+	 * Register a callback to cleanup curl resources post-abort
+	 */
+	RegisterResourceReleaseCallback(PxfAbortCallback, &node);
 
 	elog(DEBUG5, "pxf_fdw: pxfBeginForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
@@ -1174,12 +1176,14 @@ BeginCopyTo(Relation forrel, List *options)
 	return cstate;
 }
 
-/*
- * exitHook
- * 		Close all Oracle connections on process exit.
- */
 static void
-PxfExitHook(int code, Datum arg)
+PxfAbortCallback(ResourceReleasePhase phase,
+				 bool isCommit,
+				 bool isTopLevel,
+				 void *arg)
 {
-	elog(DEBUG1, "pxf_fdw: PxfExitHook called");
+	if (isCommit || phase != RESOURCE_RELEASE_AFTER_LOCKS)
+		return;
+
+	pxfEndForeignScan(arg);
 }
