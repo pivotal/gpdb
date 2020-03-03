@@ -1,4 +1,12 @@
 /*
+ * pxf_controller.h
+ *		  Functions for reading and writing data from the PXF Server.
+ *
+ * IDENTIFICATION
+ *		  contrib/pxf_fdw/pxf_controller.h
+ */
+
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information

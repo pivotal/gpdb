@@ -18,6 +18,13 @@
  *
  */
 
+/*
+ * pxf_controller.c
+ *		  Functions for reading and writing data from the PXF Server.
+ *
+ * IDENTIFICATION
+ *		  contrib/pxf_fdw/pxf_controller.c
+ */
 #include "pxf_controller.h"
 
 #include "pxf_header.h"
