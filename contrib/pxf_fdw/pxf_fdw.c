@@ -28,7 +28,6 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 #include "parser/parsetree.h"
-#include "storage/ipc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 

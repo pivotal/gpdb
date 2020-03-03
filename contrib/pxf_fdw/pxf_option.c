@@ -23,6 +23,7 @@
 
 #define FDW_OPTION_WIRE_FORMAT_TEXT "text"
 #define FDW_OPTION_WIRE_FORMAT_CSV "csv"
+#define FDW_OPTION_WIRE_FORMAT_BINARY "binary"
 
 #define FDW_OPTION_REJECT_LIMIT_ROWS "rows"
 #define FDW_OPTION_REJECT_LIMIT_PERCENT "percent"
@@ -452,11 +453,22 @@ PxfGetOptions(Oid foreigntableid)
 	if (opt->format)
 		opt->profile = psprintf("%s:%s", opt->protocol, opt->format);
 
+	opt->wire_format = FDW_OPTION_WIRE_FORMAT_TEXT;
+
 	if (opt->format && pg_strcasecmp(opt->format, FDW_OPTION_WIRE_FORMAT_TEXT) == 0)
-		wireFormat = (Node *)makeString(FDW_OPTION_WIRE_FORMAT_TEXT);
+	{
+		wireFormat = (Node *) makeString(FDW_OPTION_WIRE_FORMAT_TEXT);
+	}
+	else if (opt->format && pg_strcasecmp(opt->format, FDW_OPTION_WIRE_FORMAT_CSV) == 0)
+	{
+		wireFormat = (Node *) makeString(FDW_OPTION_WIRE_FORMAT_CSV);
+	}
 	else
-		/* default wire_format is CSV */
-		wireFormat = (Node *)makeString(FDW_OPTION_WIRE_FORMAT_CSV);
+	{
+		/* default wire_format is binary */
+		wireFormat = (Node *) makeString(FDW_OPTION_WIRE_FORMAT_BINARY);
+		opt->wire_format = "Binary";
+	}
 
 	copy_options = lappend(copy_options, makeDefElem(FDW_COPY_OPTION_FORMAT, wireFormat));
 

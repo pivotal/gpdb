@@ -40,6 +40,7 @@ typedef struct PxfOptions
 	char	   *resource;		/* PXF resource */
 	char	   *format;			/* PXF resource format */
 	char	   *profile;		/* protocol[:format] */
+	char	   *wire_format;		/* The format on the wire */
 
 	List	   *copy_options;	/* merged options for COPY */
 	List	   *options;		/* merged options, excluding COPY, protocol,
