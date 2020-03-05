@@ -90,35 +90,35 @@ typedef struct churl_settings
 } churl_settings;
 
 
-churl_context *CurlNewContext(void);
-void		CreateCurlHandle(churl_context *context);
-void		SetCurlOption(churl_context *context, CURLoption option, const void *data);
-size_t		ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata);
-void		SetupMultiHandle(churl_context *context);
-void		MultiPerform(churl_context *context);
-bool		InternalBufferLargeEnough(curl_buffer *buffer, size_t required);
-void		FlushInternalBuffer(churl_context *context);
-char	   *get_dest_address(CURL * curl_handle);
-void		enlarge_internal_buffer(curl_buffer *buffer, size_t required);
-void		finish_upload(churl_context *context);
-void		cleanup_curl_handle(churl_context *context);
-void		multi_remove_handle(churl_context *context);
-void		cleanup_internal_buffer(curl_buffer *buffer);
-void		churl_cleanup_context(churl_context *context);
-size_t		write_callback(char *buffer, size_t size, size_t nitems, void *userp);
-void		fill_internal_buffer(churl_context *context, int want);
-void		churl_headers_set(churl_context *context, PXF_CURL_HEADERS settings);
-void		check_response_status(churl_context *context);
-void		check_response_code(churl_context *context);
-void		check_response(churl_context *context);
-void		ClearErrorBuffer(churl_context *context);
-size_t		header_callback(char *buffer, size_t size, size_t nitems, void *userp);
-void		free_http_response(churl_context *context);
-void		compact_internal_buffer(curl_buffer *buffer);
-void		realloc_internal_buffer(curl_buffer *buffer, size_t required);
-bool		handle_special_error(long response, StringInfo err);
-char	   *get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer);
-char	   *build_header_str(const char *format, const char *key, const char *value);
+static churl_context	*CurlNewContext(void);
+static void	CreateCurlHandle(churl_context *context);
+static void	SetCurlOption(churl_context *context, CURLoption option, const void *data);
+static size_t	ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata);
+static void	SetupMultiHandle(churl_context *context);
+static void	MultiPerform(churl_context *context);
+static bool	InternalBufferLargeEnough(curl_buffer *buffer, size_t required);
+static void	FlushInternalBuffer(churl_context *context);
+static char	*GetDestAddress(CURL * curl_handle);
+static void	EnlargeInternalBuffer(curl_buffer *buffer, size_t required);
+static void	FinishUpload(churl_context *context);
+static void	CleanupCurlHandle(churl_context *context);
+static void	MultiRemoveHandle(churl_context *context);
+static void	CleanupInternalBuffer(curl_buffer *buffer);
+static void	CurlCleanupContext(churl_context *context);
+static size_t	WriteCallback(char *buffer, size_t size, size_t nitems, void *userp);
+static void	FillInternalBuffer(churl_context *context, int want);
+static void	CurlHeadersSet(churl_context *context, PXF_CURL_HEADERS settings);
+static void	CheckResponseStatus(churl_context *context);
+static void	CheckResponseCode(churl_context *context);
+static void	CheckResponse(churl_context *context);
+static void	ClearErrorBuffer(churl_context *context);
+static size_t	HeaderCallback(char *buffer, size_t size, size_t nitems, void *userp);
+static void	FreeHttpResponse(churl_context *context);
+static void	CompactInternalBuffer(curl_buffer *buffer);
+static void	ReallocInternalBuffer(curl_buffer *buffer, size_t required);
+static bool	HandleSpecialError(long response, StringInfo err);
+static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer);
+static char	*BuildHeaderStr(const char *format, const char *key, const char *value);
 
 
 /*
@@ -158,8 +158,8 @@ PxfCurlHeadersInit(void)
  * and populate <key> and <value> in it.
  * If value is empty, return <key>.
  */
-char *
-build_header_str(const char *format, const char *key, const char *value)
+static char *
+BuildHeaderStr(const char *format, const char *key, const char *value)
 {
 	char	   *header_option = NULL;
 
@@ -182,7 +182,7 @@ PxfCurlHeadersAppend(PXF_CURL_HEADERS headers, const char *key, const char *valu
 	churl_settings *settings = (churl_settings *) headers;
 	char	   *header_option = NULL;
 
-	header_option = build_header_str("%s: %s", key, value);
+	header_option = BuildHeaderStr("%s: %s", key, value);
 
 	settings->headers = curl_slist_append(settings->headers,
 										  header_option);
@@ -202,7 +202,7 @@ PxfCurlHeadersOverride(PXF_CURL_HEADERS headers, const char *key, const char *va
 	Assert(key != NULL);
 
 	/* key to compare with in the headers */
-	key_option = build_header_str("%s:%s", key, value ? "" : NULL);
+	key_option = BuildHeaderStr("%s:%s", key, value ? "" : NULL);
 
 	/* find key in headers list */
 	while (header_cell != NULL)
@@ -220,7 +220,7 @@ PxfCurlHeadersOverride(PXF_CURL_HEADERS headers, const char *key, const char *va
 
 	if (header_cell != NULL)	/* found key */
 	{
-		char	   *new_data = build_header_str("%s: %s", key, value);
+		char	   *new_data = BuildHeaderStr("%s: %s", key, value);
 		char	   *old_data = header_cell->data;
 
 		header_cell->data = strdup(new_data);
@@ -250,7 +250,7 @@ PxfCurlHeadersRemove(PXF_CURL_HEADERS headers, const char *key, bool has_value)
 	Assert(key != NULL);
 
 	/* key to compare with in the headers */
-	key_option = build_header_str("%s:%s", key, has_value ? "" : NULL);
+	key_option = BuildHeaderStr("%s:%s", key, has_value ? "" : NULL);
 
 	/* find key in headers list */
 	while (to_del_cell != NULL)
@@ -340,21 +340,21 @@ churl_init(const char *url, PXF_CURL_HEADERS headers)
 	SetCurlOption(context, CURLOPT_VERBOSE, 0L /* FALSE */);
 
 	/* set callback for each header received from server */
-	SetCurlOption(context, CURLOPT_HEADERFUNCTION, header_callback);
+	SetCurlOption(context, CURLOPT_HEADERFUNCTION, HeaderCallback);
 
 	SetCurlOption(context, CURLOPT_HEADERDATA, context);
 
 	/* set callback for each data block arriving from server to be written to application */
-	SetCurlOption(context, CURLOPT_WRITEFUNCTION, write_callback);
+	SetCurlOption(context, CURLOPT_WRITEFUNCTION, WriteCallback);
 
-	/* 'file' is the application variable that gets passed to write_callback */
+	/* 'file' is the application variable that gets passed to WriteCallback */
 	SetCurlOption(context, CURLOPT_WRITEDATA, context);
 
 	SetCurlOption(context, CURLOPT_IPRESOLVE, (const void *) CURL_IPRESOLVE_V4);
 
 	SetCurlOption(context, CURLOPT_ERRORBUFFER, context->curl_error_buffer);
 
-	churl_headers_set(context, headers);
+	CurlHeadersSet(context, headers);
 
 	return (PXF_CURL_HANDLE) context;
 }
@@ -398,14 +398,14 @@ PxfCurlDownloadRestart(PXF_CURL_HANDLE handle, const char *url, PXF_CURL_HEADERS
 	Assert(!context->upload);
 
 	/* halt current transfer */
-	multi_remove_handle(context);
+	MultiRemoveHandle(context);
 
 	/* set a new url */
 	SetCurlOption(context, CURLOPT_URL, url);
 
 	/* set headers again */
 	if (headers)
-		churl_headers_set(context, headers);
+		CurlHeadersSet(context, headers);
 
 	/* restart */
 	SetupMultiHandle(context);
@@ -426,7 +426,7 @@ PxfCurlWrite(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize)
 	{
 		FlushInternalBuffer(context);
 		if (!InternalBufferLargeEnough(context_buffer, bufsize))
-			enlarge_internal_buffer(context_buffer, bufsize);
+			EnlargeInternalBuffer(context_buffer, bufsize);
 	}
 
 	memcpy(context_buffer->ptr + context_buffer->top, buf, bufsize);
@@ -445,8 +445,8 @@ PxfCurlReadCheckConnectivity(PXF_CURL_HANDLE handle)
 
 	Assert(!context->upload);
 
-	fill_internal_buffer(context, 1);
-	check_response(context);
+	FillInternalBuffer(context, 1);
+	CheckResponse(context);
 }
 
 /*
@@ -461,7 +461,7 @@ PxfCurlRead(PXF_CURL_HANDLE handle, char *buf, size_t max_size)
 
 	Assert(!context->upload);
 
-	fill_internal_buffer(context, max_size);
+	FillInternalBuffer(context, max_size);
 
 	n = context_buffer->top - context_buffer->bot;
 
@@ -493,18 +493,18 @@ PxfCurlCleanup(PXF_CURL_HANDLE handle, bool after_error)
 	if (!after_error)
 	{
 		if (context->upload)
-			finish_upload(context);
+			FinishUpload(context);
 		else
 			PxfCurlReadCheckConnectivity(handle);
 	}
 
-	cleanup_curl_handle(context);
-	cleanup_internal_buffer(context->download_buffer);
-	cleanup_internal_buffer(context->upload_buffer);
-	churl_cleanup_context(context);
+	CleanupCurlHandle(context);
+	CleanupInternalBuffer(context->download_buffer);
+	CleanupInternalBuffer(context->upload_buffer);
+	CurlCleanupContext(context);
 }
 
-churl_context *
+static churl_context *
 CurlNewContext()
 {
 	churl_context *context = palloc0(sizeof(churl_context));
@@ -514,7 +514,7 @@ CurlNewContext()
 	return context;
 }
 
-void
+static void
 ClearErrorBuffer(churl_context *context)
 {
 	if (!context)
@@ -522,7 +522,7 @@ ClearErrorBuffer(churl_context *context)
 	context->curl_error_buffer[0] = 0;
 }
 
-void
+static void
 CreateCurlHandle(churl_context *context)
 {
 	context->curl_handle = curl_easy_init();
@@ -530,7 +530,7 @@ CreateCurlHandle(churl_context *context)
 		elog(ERROR, "internal error: curl_easy_init failed");
 }
 
-void
+static void
 SetCurlOption(churl_context *context, CURLoption option, const void *data)
 {
 	int			curl_error;
@@ -545,7 +545,7 @@ SetCurlOption(churl_context *context, CURLoption option, const void *data)
  * Copies data from internal buffer to libcurl's buffer.
  * Once zero is returned, libcurl knows upload is over
  */
-size_t
+static size_t
 ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
 	churl_context *context = (churl_context *) userdata;
@@ -562,7 +562,7 @@ ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata)
 /*
  * Setups the libcurl multi API
  */
-void
+static void
 SetupMultiHandle(churl_context *context)
 {
 	int			curl_error;
@@ -588,7 +588,7 @@ SetupMultiHandle(churl_context *context)
  * During this functions execution,
  * callbacks are called.
  */
-void
+static void
 MultiPerform(churl_context *context)
 {
 	int			curl_error;
@@ -601,13 +601,13 @@ MultiPerform(churl_context *context)
 			 curl_error, curl_easy_strerror(curl_error));
 }
 
-bool
+static bool
 InternalBufferLargeEnough(curl_buffer *buffer, size_t required)
 {
 	return ((buffer->top + required) <= buffer->max);
 }
 
-void
+static void
 FlushInternalBuffer(churl_context *context)
 {
 	curl_buffer *context_buffer = context->upload_buffer;
@@ -628,9 +628,9 @@ FlushInternalBuffer(churl_context *context)
 
 	if ((context->curl_still_running == 0) &&
 		((context_buffer->top - context_buffer->bot) > 0))
-		elog(ERROR, "failed sending to remote component %s", get_dest_address(context->curl_handle));
+		elog(ERROR, "failed sending to remote component %s", GetDestAddress(context->curl_handle));
 
-	check_response(context);
+	CheckResponse(context);
 
 	context_buffer->top = 0;
 	context_buffer->bot = 0;
@@ -641,8 +641,8 @@ FlushInternalBuffer(churl_context *context)
  * If it's not available, returns an empty string.
  * The returned value should be free'd.
  */
-char *
-get_dest_address(CURL * curl_handle)
+static char *
+GetDestAddress(CURL * curl_handle)
 {
 	char	   *dest_url = NULL;
 
@@ -655,8 +655,8 @@ get_dest_address(CURL * curl_handle)
 	return dest_url;
 }
 
-void
-enlarge_internal_buffer(curl_buffer *buffer, size_t required)
+static void
+EnlargeInternalBuffer(curl_buffer *buffer, size_t required)
 {
 	buffer->max = (int) required + 1024;
 	buffer->ptr = repalloc(buffer->ptr, buffer->max);
@@ -666,8 +666,8 @@ enlarge_internal_buffer(curl_buffer *buffer, size_t required)
  * Let libcurl finish the upload by
  * calling perform repeatedly
  */
-void
-finish_upload(churl_context *context)
+static void
+FinishUpload(churl_context *context)
 {
 	if (!context->multi_handle)
 		return;
@@ -681,24 +681,24 @@ finish_upload(churl_context *context)
 	while (context->curl_still_running != 0)
 		MultiPerform(context);
 
-	check_response(context);
+	CheckResponse(context);
 }
 
-void
-cleanup_curl_handle(churl_context *context)
+static void
+CleanupCurlHandle(churl_context *context)
 {
 	if (!context->curl_handle)
 		return;
 	if (context->multi_handle)
-		multi_remove_handle(context);
+		MultiRemoveHandle(context);
 	curl_easy_cleanup(context->curl_handle);
 	context->curl_handle = NULL;
 	curl_multi_cleanup(context->multi_handle);
 	context->multi_handle = NULL;
 }
 
-void
-multi_remove_handle(churl_context *context)
+static void
+MultiRemoveHandle(churl_context *context)
 {
 	int			curl_error;
 
@@ -710,8 +710,8 @@ multi_remove_handle(churl_context *context)
 			 curl_error, curl_easy_strerror(curl_error));
 }
 
-void
-cleanup_internal_buffer(curl_buffer *buffer)
+static void
+CleanupInternalBuffer(curl_buffer *buffer)
 {
 	if ((buffer) && (buffer->ptr))
 	{
@@ -723,8 +723,8 @@ cleanup_internal_buffer(curl_buffer *buffer)
 	}
 }
 
-void
-churl_cleanup_context(churl_context *context)
+static void
+CurlCleanupContext(churl_context *context)
 {
 	if (context)
 	{
@@ -738,7 +738,7 @@ churl_cleanup_context(churl_context *context)
 }
 
 /*
- * write_callback
+ * WriteCallback
  *
  * Called by libcurl perform during a download.
  * Stores data from libcurl's buffer into the internal buffer.
@@ -746,8 +746,8 @@ churl_cleanup_context(churl_context *context)
  *
  * we return the number of bytes written to the application buffer
  */
-size_t
-write_callback(char *buffer, size_t size, size_t nitems, void *userp)
+static size_t
+WriteCallback(char *buffer, size_t size, size_t nitems, void *userp)
 {
 	churl_context *context = (churl_context *) userp;
 	curl_buffer *context_buffer = context->download_buffer;
@@ -755,9 +755,9 @@ write_callback(char *buffer, size_t size, size_t nitems, void *userp)
 
 	if (!InternalBufferLargeEnough(context_buffer, nbytes))
 	{
-		compact_internal_buffer(context_buffer);
+		CompactInternalBuffer(context_buffer);
 		if (!InternalBufferLargeEnough(context_buffer, nbytes))
-			realloc_internal_buffer(context_buffer, nbytes);
+			ReallocInternalBuffer(context_buffer, nbytes);
 	}
 
 	/* enough space. copy buffer into curl->buf */
@@ -771,8 +771,8 @@ write_callback(char *buffer, size_t size, size_t nitems, void *userp)
  * Fills internal buffer up to want bytes.
  * returns when size reached or transfer ended
  */
-void
-fill_internal_buffer(churl_context *context, int want)
+static void
+FillInternalBuffer(churl_context *context, int want)
 {
 	fd_set		fdread;
 	fd_set		fdwrite;
@@ -849,8 +849,8 @@ fill_internal_buffer(churl_context *context, int want)
 	}
 }
 
-void
-churl_headers_set(churl_context *context, PXF_CURL_HEADERS headers)
+static void
+CurlHeadersSet(churl_context *context, PXF_CURL_HEADERS headers)
 {
 	churl_settings *settings = (churl_settings *) headers;
 
@@ -861,11 +861,11 @@ churl_headers_set(churl_context *context, PXF_CURL_HEADERS headers)
  * Checks that the response finished successfully
  * with a valid response status and code.
  */
-void
-check_response(churl_context *context)
+static void
+CheckResponse(churl_context *context)
 {
-	check_response_code(context);
-	check_response_status(context);
+	CheckResponseCode(context);
+	CheckResponseStatus(context);
 }
 
 /*
@@ -874,8 +874,8 @@ check_response(churl_context *context)
  * a message can have a response code 200 (OK), but end prematurely
  * and so have an error status.
  */
-void
-check_response_status(churl_context *context)
+static void
+CheckResponseStatus(churl_context *context)
 {
 	CURLMsg    *msg;			/* for picking up messages with the transfer
 								 * status */
@@ -891,7 +891,7 @@ check_response_status(churl_context *context)
 			continue;
 		if (CURLE_OK != (status = msg->data.result))
 		{
-			char	   *addr = get_dest_address(msg->easy_handle);
+			char	   *addr = GetDestAddress(msg->easy_handle);
 			StringInfoData err;
 
 			initStringInfo(&err);
@@ -904,7 +904,7 @@ check_response_status(churl_context *context)
 			pfree(addr);
 			elog(ERROR, "%s", err.data);
 		}
-		elog(DEBUG2, "check_response_status: msg %d done with status OK", i++);
+		elog(DEBUG2, "CheckResponseStatus: msg %d done with status OK", i++);
 	}
 }
 
@@ -912,8 +912,8 @@ check_response_status(churl_context *context)
  * Parses return code from libcurl operation and
  * reports if different than 200 and 100
  */
-void
-check_response_code(churl_context *context)
+static void
+CheckResponseCode(churl_context *context)
 {
 	long		response_code;
 	char		*response_text = NULL;
@@ -928,7 +928,7 @@ check_response_code(churl_context *context)
 	elog(DEBUG2, "http response code: %ld", response_code);
 	if ((response_code == 0) && (context->curl_still_running > 0))
 	{
-		elog(DEBUG2, "check_response_code: curl is still running, but no data was received.");
+		elog(DEBUG2, "CheckResponseCode: curl is still running, but no data was received.");
 	}
 	else if (response_code != 200 && response_code != 100)
 	{
@@ -948,21 +948,21 @@ check_response_code(churl_context *context)
 		/* add remote http error code */
 		appendStringInfo(&err, "remote component error (%ld)", response_code);
 
-		addr = get_dest_address(context->curl_handle);
+		addr = GetDestAddress(context->curl_handle);
 		if (strlen(addr) != 0)
 		{
 			appendStringInfo(&err, " from %s", addr);
 		}
 		pfree(addr);
 
-		if (!handle_special_error(response_code, &err))
+		if (!HandleSpecialError(response_code, &err))
 		{
 			/*
 			 * add detailed error message from the http response.
-			 * response_text could be NULL in some cases. get_http_error_msg
+			 * response_text could be NULL in some cases. GetHttpErrorMsg
 			 * checks for that.
 			 */
-			http_error_msg = get_http_error_msg(response_code, response_text, context->curl_error_buffer);
+			http_error_msg = GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer);
 
 			/*
 			 * check for a specific confusing error, and replace with a
@@ -982,7 +982,7 @@ check_response_code(churl_context *context)
 
 	}
 
-	free_http_response(context);
+	FreeHttpResponse(context);
 }
 
 /*
@@ -1015,8 +1015,8 @@ check_response_code(churl_context *context)
  * Our first priority is to get the paragraph <p> inside <body>, and in case we don't find it, then we try to get
  * the <title>.
  */
-char *
-get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer)
+static char *
+GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
 {
 	char	   *start,
 			   *end,
@@ -1136,8 +1136,8 @@ get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer)
 	return msg;
 }
 
-void
-free_http_response(churl_context *context)
+static void
+FreeHttpResponse(churl_context *context)
 {
 	if (!context->last_http_reponse)
 		return;
@@ -1150,8 +1150,8 @@ free_http_response(churl_context *context)
  * Called during a perform by libcurl on either download or an upload.
  * Stores the first line of the header for error reporting
  */
-size_t
-header_callback(char *buffer, size_t size, size_t nitems, void *userp)
+static size_t
+HeaderCallback(char *buffer, size_t size, size_t nitems, void *userp)
 {
 	const int	nbytes = size * nitems;
 	churl_context *context = (churl_context *) userp;
@@ -1168,8 +1168,8 @@ header_callback(char *buffer, size_t size, size_t nitems, void *userp)
 	return nbytes;
 }
 
-void
-compact_internal_buffer(curl_buffer *buffer)
+static void
+CompactInternalBuffer(curl_buffer *buffer)
 {
 	int			n;
 
@@ -1183,8 +1183,8 @@ compact_internal_buffer(curl_buffer *buffer)
 	buffer->top = n;
 }
 
-void
-realloc_internal_buffer(curl_buffer *buffer, size_t required)
+static void
+ReallocInternalBuffer(curl_buffer *buffer, size_t required)
 {
 	int			n;
 
@@ -1200,8 +1200,8 @@ realloc_internal_buffer(curl_buffer *buffer, size_t required)
 	Assert(buffer->top + required < buffer->max);
 }
 
-bool
-handle_special_error(long response, StringInfo err)
+static bool
+HandleSpecialError(long response, StringInfo err)
 {
 	if (response == 404)
 	{

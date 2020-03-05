@@ -894,7 +894,7 @@ check_response_code(churl_context *context)
 			pfree(addr);
 		}
 
-		if (!handle_special_error(response_code, &err))
+		if (!HandleSpecialError(response_code, &err))
 		{
 			/*
 			 * add detailed error message from the http response.
