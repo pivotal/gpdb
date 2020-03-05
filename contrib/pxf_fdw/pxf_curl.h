@@ -35,7 +35,7 @@ typedef void *PXF_CURL_HANDLE;
  * PUT example
  * -----------
  *
- * PXF_CURL_HEADERS http_headers = churl_headers_init();
+ * PXF_CURL_HEADERS http_headers = PxfCurlHeadersInit();
  * churl_headers_append(http_headers, "a", "b");
  * churl_headers_append(http_headers, "c", "d");
  *
@@ -51,7 +51,7 @@ typedef void *PXF_CURL_HANDLE;
  * GET example
  * -----------
  *
- * PXF_CURL_HEADERS http_headers = churl_headers_init();
+ * PXF_CURL_HEADERS http_headers = PxfCurlHeadersInit();
  * churl_headers_append(http_headers, "a", "b");
  * churl_headers_append(http_headers, "c", "d");
  *
@@ -71,7 +71,7 @@ typedef void *PXF_CURL_HANDLE;
 /*
  * Create a handle for adding headers
  */
-PXF_CURL_HEADERS churl_headers_init(void);
+PXF_CURL_HEADERS PxfCurlHeadersInit(void);
 
 /*
  * Add a new header

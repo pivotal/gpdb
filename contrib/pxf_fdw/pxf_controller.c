@@ -65,7 +65,7 @@ PxfControllerCleanup(PxfFdwModifyState *pxfmstate)
 void
 PxfControllerImportStart(PxfFdwScanState *pxfsstate)
 {
-	pxfsstate->curl_headers = churl_headers_init();
+	pxfsstate->curl_headers = PxfCurlHeadersInit();
 
 	BuildUriForRead(pxfsstate);
 	BuildHttpHeaders(pxfsstate->curl_headers,
@@ -87,7 +87,7 @@ void
 PxfControllerExportStart(PxfFdwModifyState *pxfmstate)
 {
 	BuildUriForWrite(pxfmstate);
-	pxfmstate->curl_headers = churl_headers_init();
+	pxfmstate->curl_headers = PxfCurlHeadersInit();
 	BuildHttpHeaders(pxfmstate->curl_headers,
 					 pxfmstate->options,
 					 pxfmstate->relation,

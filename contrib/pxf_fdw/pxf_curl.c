@@ -146,7 +146,7 @@ print_http_headers(PXF_CURL_HEADERS headers)
 }
 
 PXF_CURL_HEADERS
-churl_headers_init(void)
+PxfCurlHeadersInit(void)
 {
 	churl_settings *settings = (churl_settings *) palloc0(sizeof(churl_settings));
 
