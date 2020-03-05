@@ -658,7 +658,7 @@ void
 enlarge_internal_buffer(churl_buffer *buffer, size_t required)
 {
 	buffer->max = (int) required + 1024;
-	repalloc(buffer->ptr, buffer->max);
+	buffer->ptr = repalloc(buffer->ptr, buffer->max);
 }
 
 /*
@@ -737,9 +737,13 @@ churl_cleanup_context(churl_context *context)
 }
 
 /*
+ * write_callback
+ *
  * Called by libcurl perform during a download.
  * Stores data from libcurl's buffer into the internal buffer.
  * If internal buffer is not large enough, increases it.
+ *
+ * we return the number of bytes written to the application buffer
  */
 size_t
 write_callback(char *buffer, size_t size, size_t nitems, void *userp)
@@ -1191,6 +1195,8 @@ realloc_internal_buffer(churl_buffer *buffer, size_t required)
 		buffer->ptr = repalloc(buffer->ptr, n);
 
 	buffer->max = n;
+
+	Assert(buffer->top + required < buffer->max);
 }
 
 bool
