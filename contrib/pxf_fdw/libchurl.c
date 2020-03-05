@@ -799,13 +799,11 @@ fill_internal_buffer(churl_context *context, int want)
 				 curl_error, curl_easy_strerror(curl_error));
 		}
 
-		if (maxfd <= 0)
+		if (maxfd == -1)
 		{
 			/* curl is not ready if maxfd -1 is returned */
-			elog(LOG, "curl_multi_fdset set maxfd = %d", maxfd);
 			context->curl_still_running = 0;
 			pg_usleep(100);
-			multi_perform(context);
 		}
 		else if ((nfds = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout)) == -1)
 		{
@@ -824,18 +822,15 @@ fill_internal_buffer(churl_context *context, int want)
 
 			if (timeout_count % 60 == 0)
 			{
-				elog(LOG, "segment has not received data from gpfdist for about 1 minute, waiting for %d bytes.",
+				elog(LOG, "segment has not received data from PXF Server for about 1 minute, waiting for %d bytes.",
 					(want - (context->download_buffer->top - context->download_buffer->bot)));
 			}
 		}
-		else if (nfds > 0)
-		{
-			multi_perform(context);
-		}
-		else
+		else if (nfds < 0)
 		{
 			elog(ERROR, "select return unexpected result");
 		}
+		multi_perform(context);
 	}
 }
 
