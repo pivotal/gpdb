@@ -598,10 +598,10 @@ pxfEndForeignScan(ForeignScanState *node)
 	{
 		EndCopyFrom(pxfsstate->cstate);
 
-		if (pxfsstate->churl_handle)
+		if (pxfsstate->curl_handle)
 		{
-			churl_cleanup(pxfsstate->churl_handle, false);
-			pxfsstate->churl_handle = NULL;
+			churl_cleanup(pxfsstate->curl_handle, false);
+			pxfsstate->curl_handle = NULL;
 		}
 
 		if (pxfsstate->curl_headers)
