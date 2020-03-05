@@ -766,20 +766,6 @@ fill_internal_buffer(churl_context *context, int want)
 	int		maxfd, nfds, curl_error, timeout_count = 0;
 	long		curl_timeo = -1;
 
-	/* set a suitable timeout to fail on */
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-
-	curl_multi_timeout(context->multi_handle, &curl_timeo);
-	if (curl_timeo >= 0)
-	{
-		timeout.tv_sec = curl_timeo / 1000;
-		if (timeout.tv_sec > 1)
-			timeout.tv_sec = 1;
-		else
-			timeout.tv_usec = (curl_timeo % 1000) * 1000;
-	}
-
 	/* attempt to fill buffer */
 	while (context->curl_still_running &&
 		   ((context->download_buffer->top - context->download_buffer->bot) < want))
@@ -790,6 +776,20 @@ fill_internal_buffer(churl_context *context, int want)
 
 		/* allow canceling a query while waiting for input from remote service */
 		CHECK_FOR_INTERRUPTS();
+
+		/* set a suitable timeout to fail on */
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+
+		curl_multi_timeout(context->multi_handle, &curl_timeo);
+		if (curl_timeo >= 0)
+		{
+			timeout.tv_sec = curl_timeo / 1000;
+			if (timeout.tv_sec > 1)
+				timeout.tv_sec = 1;
+			else
+				timeout.tv_usec = (curl_timeo % 1000) * 1000;
+		}
 
 		/* get file descriptors from the transfers */
 		curl_error = curl_multi_fdset(context->multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd);
@@ -805,12 +805,9 @@ fill_internal_buffer(churl_context *context, int want)
 			elog(LOG, "curl_multi_fdset set maxfd = %d", maxfd);
 			context->curl_still_running = 0;
 			pg_usleep(100);
-			break;
+			multi_perform(context);
 		}
-
-		nfds = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout);
-
-		if (nfds == -1)
+		else if ((nfds = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout)) == -1)
 		{
 			if (errno == EINTR || errno == EAGAIN)
 			{
