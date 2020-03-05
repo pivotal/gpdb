@@ -35,9 +35,9 @@
  */
 typedef struct churl_buffer
 {
-	char	   *ptr;
+	char		*ptr;
 	int			max;
-	int			bot,
+	int		bot,
 				top;
 
 } churl_buffer;
@@ -107,7 +107,7 @@ void		cleanup_internal_buffer(churl_buffer *buffer);
 void		churl_cleanup_context(churl_context *context);
 size_t		write_callback(char *buffer, size_t size, size_t nitems, void *userp);
 void		fill_internal_buffer(churl_context *context, int want);
-void		churl_headers_set(churl_context *context, CHURL_HEADERS settings);
+void		churl_headers_set(churl_context *context, PXF_CURL_HEADERS settings);
 void		check_response_status(churl_context *context);
 void		check_response_code(churl_context *context);
 void		check_response(churl_context *context);
@@ -125,7 +125,7 @@ char	   *build_header_str(const char *format, const char *key, const char *value
  * Debug function - print the http headers
  */
 void
-print_http_headers(CHURL_HEADERS headers)
+print_http_headers(PXF_CURL_HEADERS headers)
 {
 	if ((DEBUG2 >= log_min_messages) || (DEBUG2 >= client_min_messages))
 	{
@@ -145,12 +145,12 @@ print_http_headers(CHURL_HEADERS headers)
 	}
 }
 
-CHURL_HEADERS
+PXF_CURL_HEADERS
 churl_headers_init(void)
 {
 	churl_settings *settings = (churl_settings *) palloc0(sizeof(churl_settings));
 
-	return (CHURL_HEADERS) settings;
+	return (PXF_CURL_HEADERS) settings;
 }
 
 /*
@@ -177,7 +177,7 @@ build_header_str(const char *format, const char *key, const char *value)
 }
 
 void
-churl_headers_append(CHURL_HEADERS headers, const char *key, const char *value)
+churl_headers_append(PXF_CURL_HEADERS headers, const char *key, const char *value)
 {
 	churl_settings *settings = (churl_settings *) headers;
 	char	   *header_option = NULL;
@@ -190,7 +190,7 @@ churl_headers_append(CHURL_HEADERS headers, const char *key, const char *value)
 }
 
 void
-churl_headers_override(CHURL_HEADERS headers, const char *key, const char *value)
+churl_headers_override(PXF_CURL_HEADERS headers, const char *key, const char *value)
 {
 
 	churl_settings *settings = (churl_settings *) headers;
@@ -237,7 +237,7 @@ churl_headers_override(CHURL_HEADERS headers, const char *key, const char *value
 }
 
 void
-churl_headers_remove(CHURL_HEADERS headers, const char *key, bool has_value)
+churl_headers_remove(PXF_CURL_HEADERS headers, const char *key, bool has_value)
 {
 
 	churl_settings *settings = (churl_settings *) headers;
@@ -297,7 +297,7 @@ churl_headers_remove(CHURL_HEADERS headers, const char *key, bool has_value)
 }
 
 void
-churl_headers_cleanup(CHURL_HEADERS headers)
+churl_headers_cleanup(PXF_CURL_HEADERS headers)
 {
 	churl_settings *settings = (churl_settings *) headers;
 
@@ -310,8 +310,8 @@ churl_headers_cleanup(CHURL_HEADERS headers)
 	pfree(settings);
 }
 
-static CHURL_HANDLE
-churl_init(const char *url, CHURL_HEADERS headers)
+static PXF_CURL_HANDLE
+churl_init(const char *url, PXF_CURL_HEADERS headers)
 {
 	churl_context *context = churl_new_context();
 
@@ -355,11 +355,11 @@ churl_init(const char *url, CHURL_HEADERS headers)
 
 	churl_headers_set(context, headers);
 
-	return (CHURL_HANDLE) context;
+	return (PXF_CURL_HANDLE) context;
 }
 
-CHURL_HANDLE
-churl_init_upload(const char *url, CHURL_HEADERS headers)
+PXF_CURL_HANDLE
+churl_init_upload(const char *url, PXF_CURL_HEADERS headers)
 {
 	churl_context *context = churl_init(url, headers);
 
@@ -374,11 +374,11 @@ churl_init_upload(const char *url, CHURL_HEADERS headers)
 
 	print_http_headers(headers);
 	setup_multi_handle(context);
-	return (CHURL_HANDLE) context;
+	return (PXF_CURL_HANDLE) context;
 }
 
-CHURL_HANDLE
-churl_init_download(const char *url, CHURL_HEADERS headers)
+PXF_CURL_HANDLE
+churl_init_download(const char *url, PXF_CURL_HEADERS headers)
 {
 	churl_context *context = churl_init(url, headers);
 
@@ -386,11 +386,11 @@ churl_init_download(const char *url, CHURL_HEADERS headers)
 
 	print_http_headers(headers);
 	setup_multi_handle(context);
-	return (CHURL_HANDLE) context;
+	return (PXF_CURL_HANDLE) context;
 }
 
 void
-churl_download_restart(CHURL_HANDLE handle, const char *url, CHURL_HEADERS headers)
+churl_download_restart(PXF_CURL_HANDLE handle, const char *url, PXF_CURL_HEADERS headers)
 {
 	churl_context *context = (churl_context *) handle;
 
@@ -414,7 +414,7 @@ churl_download_restart(CHURL_HANDLE handle, const char *url, CHURL_HEADERS heade
  * upload
  */
 size_t
-churl_write(CHURL_HANDLE handle, const char *buf, size_t bufsize)
+churl_write(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize)
 {
 	churl_context *context = (churl_context *) handle;
 	churl_buffer *context_buffer = context->upload_buffer;
@@ -438,7 +438,7 @@ churl_write(CHURL_HANDLE handle, const char *buf, size_t bufsize)
  * check that connection is ok, read a few bytes and check response.
  */
 void
-churl_read_check_connectivity(CHURL_HANDLE handle)
+churl_read_check_connectivity(PXF_CURL_HANDLE handle)
 {
 	churl_context *context = (churl_context *) handle;
 
@@ -452,7 +452,7 @@ churl_read_check_connectivity(CHURL_HANDLE handle)
  * download
  */
 size_t
-churl_read(CHURL_HANDLE handle, char *buf, size_t max_size)
+churl_read(PXF_CURL_HANDLE handle, char *buf, size_t max_size)
 {
 	int			n = 0;
 	churl_context *context = (churl_context *) handle;
@@ -481,7 +481,7 @@ churl_read(CHURL_HANDLE handle, char *buf, size_t max_size)
 }
 
 void
-churl_cleanup(CHURL_HANDLE handle, bool after_error)
+churl_cleanup(PXF_CURL_HANDLE handle, bool after_error)
 {
 	churl_context *context = (churl_context *) handle;
 
@@ -849,7 +849,7 @@ fill_internal_buffer(churl_context *context, int want)
 }
 
 void
-churl_headers_set(churl_context *context, CHURL_HEADERS headers)
+churl_headers_set(churl_context *context, PXF_CURL_HEADERS headers)
 {
 	churl_settings *settings = (churl_settings *) headers;
 

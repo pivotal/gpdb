@@ -29,11 +29,11 @@
 #include "utils/syscache.h"
 
 /* helper function declarations */
-static void AddAlignmentSizeHttpHeader(CHURL_HEADERS headers);
-static void AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel);
-static void AddOptionsToHttpHeader(CHURL_HEADERS headers, List *options);
-static void AddProjectionDescHttpHeader(CHURL_HEADERS headers, List *retrieved_attrs);
-static void AddProjectionIndexHeader(CHURL_HEADERS headers, int attno, char *long_number);
+static void AddAlignmentSizeHttpHeader(PXF_CURL_HEADERS headers);
+static void AddTupleDescriptionToHttpHeader(PXF_CURL_HEADERS headers, Relation rel);
+static void AddOptionsToHttpHeader(PXF_CURL_HEADERS headers, List *options);
+static void AddProjectionDescHttpHeader(PXF_CURL_HEADERS headers, List *retrieved_attrs);
+static void AddProjectionIndexHeader(PXF_CURL_HEADERS headers, int attno, char *long_number);
 static char *NormalizeKeyName(const char *key);
 static char *TypeOidGetTypename(Oid typid);
 
@@ -43,7 +43,7 @@ static char *TypeOidGetTypename(Oid typid);
  * by the remote component.
  */
 void
-BuildHttpHeaders(CHURL_HEADERS headers,
+BuildHttpHeaders(PXF_CURL_HEADERS headers,
 				 PxfOptions *options,
 				 Relation relation,
 				 char *filter_string,
@@ -118,7 +118,7 @@ BuildHttpHeaders(CHURL_HEADERS headers,
  * the alignment can be either 4 or 8.
  */
 static void
-AddAlignmentSizeHttpHeader(CHURL_HEADERS headers)
+AddAlignmentSizeHttpHeader(PXF_CURL_HEADERS headers)
 {
 	char		tmp[sizeof(char *)];
 
@@ -138,7 +138,7 @@ AddAlignmentSizeHttpHeader(CHURL_HEADERS headers)
  * optional - X-GP-ATTR-TYPEMODX-Y - attribute X's modifiers Y (types which have precision info, like numeric(p,s))
  */
 static void
-AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel)
+AddTupleDescriptionToHttpHeader(PXF_CURL_HEADERS headers, Relation rel)
 {
 	Oid		relid = RelationGetRelid(rel);
 	char		long_number[sizeof(int32) * 8];
@@ -278,7 +278,7 @@ AddTupleDescriptionToHttpHeader(CHURL_HEADERS headers, Relation rel)
  * Report projection description to the remote component
  */
 static void
-AddProjectionDescHttpHeader(CHURL_HEADERS headers, List *retrieved_attrs)
+AddProjectionDescHttpHeader(PXF_CURL_HEADERS headers, List *retrieved_attrs)
 {
 	ListCell   *lc1 = NULL;
 	char		long_number[sizeof(int32) * 8];
@@ -303,7 +303,7 @@ AddProjectionDescHttpHeader(CHURL_HEADERS headers, List *retrieved_attrs)
  * Adds the projection index header for the given attno
  */
 static void
-AddProjectionIndexHeader(CHURL_HEADERS headers,
+AddProjectionIndexHeader(PXF_CURL_HEADERS headers,
 						 int attno,
 						 char *long_number)
 {
@@ -315,7 +315,7 @@ AddProjectionIndexHeader(CHURL_HEADERS headers,
  * Add all the FDW options in the list to the curl headers
  */
 static void
-AddOptionsToHttpHeader(CHURL_HEADERS headers, List *options)
+AddOptionsToHttpHeader(PXF_CURL_HEADERS headers, List *options)
 {
 	ListCell   *cell;
 

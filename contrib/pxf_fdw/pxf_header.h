@@ -35,7 +35,7 @@
 /*
  * Adds the headers necessary for PXF service call
  */
-extern void BuildHttpHeaders(CHURL_HEADERS headers,
+extern void BuildHttpHeaders(PXF_CURL_HEADERS headers,
 							 PxfOptions *options,
 							 Relation relation,
 							 char *filter_string,

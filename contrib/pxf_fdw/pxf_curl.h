@@ -28,18 +28,18 @@
  * 1) Does not multi thread
  * 2) Does not talk IPv6
  */
-typedef void *CHURL_HEADERS;
-typedef void *CHURL_HANDLE;
+typedef void *PXF_CURL_HEADERS;
+typedef void *PXF_CURL_HANDLE;
 
 /*
  * PUT example
  * -----------
  *
- * CHURL_HEADERS http_headers = churl_headers_init();
+ * PXF_CURL_HEADERS http_headers = churl_headers_init();
  * churl_headers_append(http_headers, "a", "b");
  * churl_headers_append(http_headers, "c", "d");
  *
- * CHURL_HANDLE churl = churl_init_upload("http://127.0.0.1:12345", http_headers);
+ * PXF_CURL_HANDLE churl = churl_init_upload("http://127.0.0.1:12345", http_headers);
  * while(have_stuff_to_write())
  * {
  *     churl_write(churl);
@@ -51,11 +51,11 @@ typedef void *CHURL_HANDLE;
  * GET example
  * -----------
  *
- * CHURL_HEADERS http_headers = churl_headers_init();
+ * PXF_CURL_HEADERS http_headers = churl_headers_init();
  * churl_headers_append(http_headers, "a", "b");
  * churl_headers_append(http_headers, "c", "d");
  *
- * CHURL_HANDLE churl = churl_init_download("http://127.0.0.1:12345", http_headers);
+ * PXF_CURL_HANDLE churl = churl_init_download("http://127.0.0.1:12345", http_headers);
  *
  * char buf[64 * 1024];
  * size_t n = 0;
@@ -71,20 +71,20 @@ typedef void *CHURL_HANDLE;
 /*
  * Create a handle for adding headers
  */
-CHURL_HEADERS churl_headers_init(void);
+PXF_CURL_HEADERS churl_headers_init(void);
 
 /*
  * Add a new header
  * Headers are added in the form 'key: value'
  */
-void		churl_headers_append(CHURL_HEADERS headers, const char *key, const char *value);
+void		churl_headers_append(PXF_CURL_HEADERS headers, const char *key, const char *value);
 
 /*
  * Override header with given 'key'.
  * If header doesn't exist, create new one (using churl_headers_append).
  * Headers are added in the form 'key: value'
  */
-void		churl_headers_override(CHURL_HEADERS headers, const char *key, const char *value);
+void		churl_headers_override(PXF_CURL_HEADERS headers, const char *key, const char *value);
 
 /*
  * Remove header with given 'key'.
@@ -93,55 +93,55 @@ void		churl_headers_override(CHURL_HEADERS headers, const char *key, const char 
  * If the header is the first one on the list,
  * point the headers list to the next element.
  */
-void		churl_headers_remove(CHURL_HEADERS headers, const char *key, bool has_value);
+void		churl_headers_remove(PXF_CURL_HEADERS headers, const char *key, bool has_value);
 
 /*
  * Cleanup handle for headers
  */
-void		churl_headers_cleanup(CHURL_HEADERS headers);
+void		churl_headers_cleanup(PXF_CURL_HEADERS headers);
 
 /*
  * Start an upload to url
  * returns a handle to churl transfer
  */
-CHURL_HANDLE churl_init_upload(const char *url, CHURL_HEADERS headers);
+PXF_CURL_HANDLE churl_init_upload(const char *url, PXF_CURL_HEADERS headers);
 
 /*
  * Start a download to url
  * returns a handle to churl transfer
  */
-CHURL_HANDLE churl_init_download(const char *url, CHURL_HEADERS headers);
+PXF_CURL_HANDLE churl_init_download(const char *url, PXF_CURL_HEADERS headers);
 
 /*
  * Restart a session to a new URL
  * This will use the same headers
  */
-void		churl_download_restart(CHURL_HANDLE, const char *url, CHURL_HEADERS headers);
+void		churl_download_restart(PXF_CURL_HANDLE, const char *url, PXF_CURL_HEADERS headers);
 
 /*
  * Send buf of bufsize
  */
-size_t		churl_write(CHURL_HANDLE handle, const char *buf, size_t bufsize);
+size_t		churl_write(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize);
 
 /*
  * Receive up to max_size into buf
  */
-size_t		churl_read(CHURL_HANDLE handle, char *buf, size_t max_size);
+size_t		churl_read(PXF_CURL_HANDLE handle, char *buf, size_t max_size);
 
 /*
  * Check connectivity by reading some bytes and checking response
  */
-void		churl_read_check_connectivity(CHURL_HANDLE handle);
+void		churl_read_check_connectivity(PXF_CURL_HANDLE handle);
 
 /*
  * Cleanup churl resources
  */
-void		churl_cleanup(CHURL_HANDLE handle, bool after_error);
+void		churl_cleanup(PXF_CURL_HANDLE handle, bool after_error);
 
 /*
  * Debug function - print the http headers
  */
-void		print_http_headers(CHURL_HEADERS headers);
+void		print_http_headers(PXF_CURL_HEADERS headers);
 
 #define LocalhostIpV4Entry ":127.0.0.1"
 #define LocalhostIpV4 "localhost"
