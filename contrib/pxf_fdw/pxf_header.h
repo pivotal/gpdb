@@ -17,13 +17,13 @@
  * under the License.
  */
 
-#ifndef _PXFHEADERS_H_
-#define _PXFHEADERS_H_
+#ifndef _PXF_HEADER_H_
+#define _PXF_HEADER_H_
 
 #define PXF_SERVICE_PREFIX "pxf"
 #define PXF_VERSION "v15"
 
-#include "libchurl.h"
+#include "pxf_curl.h"
 
 #include "pxf_fdw.h"
 #include "pxf_option.h"
@@ -41,4 +41,4 @@ extern void BuildHttpHeaders(CHURL_HEADERS headers,
 							 char *filter_string,
 							 List *retrieved_attrs);
 
-#endif							/* _PXFHEADERS_H_ */
+#endif							/* _PXF_HEADER_H_ */

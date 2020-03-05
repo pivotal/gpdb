@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "libchurl.h"
+#include "pxf_curl.h"
 #include "miscadmin.h"
 #include "utils/guc.h"
 

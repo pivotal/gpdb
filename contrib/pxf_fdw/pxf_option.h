@@ -10,8 +10,8 @@
 
 #include "nodes/pg_list.h"
 
-#ifndef _PXF_OPTION_H
-#define _PXF_OPTION_H
+#ifndef _PXF_OPTION_H_
+#define _PXF_OPTION_H_
 
 /*
  * Structure to store the PXF options */
@@ -51,4 +51,4 @@ typedef struct PxfOptions
 /* Functions prototypes for pxf_option.c file */
 PxfOptions *PxfGetOptions(Oid foreigntableid);
 
-#endif							/* _PXF_OPTION_H */
+#endif							/* _PXF_OPTION_H_ */

@@ -21,8 +21,8 @@
  * under the License.
  *
  */
-#ifndef _PXF_FILTERS_H_
-#define _PXF_FILTERS_H_
+#ifndef _PXF_FILTER_H_
+#define _PXF_FILTER_H_
 
 #include "postgres.h"
 #include "access/attnum.h"
@@ -148,4 +148,4 @@ pxfoperand_is_list_const(PxfOperand x)
 char	   *SerializePxfFilterQuals(List *quals);
 List	   *extractPxfAttributes(List *quals, bool *qualsAreSupported);
 
-#endif							/* // _PXF_FILTERS_H_ */
+#endif							/* // _PXF_FILTER_H_ */

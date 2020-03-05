@@ -14,8 +14,8 @@
 #include "nodes/relation.h"
 #include "utils/rel.h"
 
-#ifndef PXF_FDW_H
-#define PXF_FDW_H
+#ifndef _PXF_FDW_H_
+#define _PXF_FDW_H_
 
 #define PXF_SEGMENT_ID           GpIdentity.segindex
 #define PXF_SEGMENT_COUNT        getgpsegmentCount()

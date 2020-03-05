@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef _LIBCHURL_H_
-#define _LIBCHURL_H_
+#ifndef _PXF_CURL_H_
+#define _PXF_CURL_H_
 
 #include "postgres.h"
 
@@ -147,4 +147,4 @@ void		print_http_headers(CHURL_HEADERS headers);
 #define LocalhostIpV4 "localhost"
 #define REST_HEADER_JSON_RESPONSE "Accept: application/json"
 
-#endif							/* _LIBCHURL_H_ */
+#endif							/* _PXF_CURL_H_ */

@@ -26,12 +26,12 @@
  *
  */
 
-#ifndef _PXF_CONTROLLER_H
-#define _PXF_CONTROLLER_H
+#ifndef _PXF_CONTROLLER_H_
+#define _PXF_CONTROLLER_H_
 
 #include "pxf_option.h"
 
-#include "libchurl.h"
+#include "pxf_curl.h"
 
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
@@ -86,4 +86,4 @@ int			PxfControllerRead(void *outbuf, int datasize, void *extra);
 /* Writes data from the given buffer of a given size to the PXF server */
 int			PxfControllerWrite(PxfFdwModifyState *context, char *databuf, int datalen);
 
-#endif							/* _PXF_CONTROLLER_H */
+#endif							/* _PXF_CONTROLLER_H_ */
