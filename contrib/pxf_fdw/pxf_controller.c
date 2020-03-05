@@ -48,8 +48,8 @@ PxfControllerCleanup(PxfFdwModifyState *pxfmstate)
 	churl_cleanup(pxfmstate->churl_handle, false);
 	pxfmstate->churl_handle = NULL;
 
-	churl_headers_cleanup(pxfmstate->churl_headers);
-	pxfmstate->churl_headers = NULL;
+	churl_headers_cleanup(pxfmstate->curl_headers);
+	pxfmstate->curl_headers = NULL;
 
 	/* TODO: do we need to cleanup filter_str for foreign scan? */
 /*	if (pxfmstate->filter_str != NULL)
@@ -65,16 +65,16 @@ PxfControllerCleanup(PxfFdwModifyState *pxfmstate)
 void
 PxfControllerImportStart(PxfFdwScanState *pxfsstate)
 {
-	pxfsstate->churl_headers = churl_headers_init();
+	pxfsstate->curl_headers = churl_headers_init();
 
 	BuildUriForRead(pxfsstate);
-	BuildHttpHeaders(pxfsstate->churl_headers,
+	BuildHttpHeaders(pxfsstate->curl_headers,
 					 pxfsstate->options,
 					 pxfsstate->relation,
 					 pxfsstate->filter_str,
 					 pxfsstate->retrieved_attrs);
 
-	pxfsstate->churl_handle = churl_init_download(pxfsstate->uri.data, pxfsstate->churl_headers);
+	pxfsstate->churl_handle = churl_init_download(pxfsstate->uri.data, pxfsstate->curl_headers);
 
 	/* read some bytes to make sure the connection is established */
 	churl_read_check_connectivity(pxfsstate->churl_handle);
@@ -87,13 +87,13 @@ void
 PxfControllerExportStart(PxfFdwModifyState *pxfmstate)
 {
 	BuildUriForWrite(pxfmstate);
-	pxfmstate->churl_headers = churl_headers_init();
-	BuildHttpHeaders(pxfmstate->churl_headers,
+	pxfmstate->curl_headers = churl_headers_init();
+	BuildHttpHeaders(pxfmstate->curl_headers,
 					 pxfmstate->options,
 					 pxfmstate->relation,
 					 NULL,
 					 NULL);
-	pxfmstate->churl_handle = churl_init_upload(pxfmstate->uri.data, pxfmstate->churl_headers);
+	pxfmstate->churl_handle = churl_init_upload(pxfmstate->uri.data, pxfmstate->curl_headers);
 }
 
 /*

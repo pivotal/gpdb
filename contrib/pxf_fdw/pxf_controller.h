@@ -43,7 +43,7 @@
  */
 typedef struct PxfFdwScanState
 {
-	PXF_CURL_HEADERS churl_headers;
+	PXF_CURL_HEADERS curl_headers;
 	PXF_CURL_HANDLE churl_handle;
 	StringInfoData uri;
 	Relation	relation;
@@ -62,7 +62,7 @@ typedef struct PxfFdwModifyState
 	CopyState	cstate;			/* state of writing to PXF */
 
 	PXF_CURL_HANDLE churl_handle;	/* curl handle */
-	PXF_CURL_HEADERS churl_headers;	/* curl headers */
+	PXF_CURL_HEADERS curl_headers;	/* curl headers */
 	StringInfoData uri;			/* rest endpoint URI for modify */
 	Relation	relation;
 	PxfOptions *options;		/* FDW options */
