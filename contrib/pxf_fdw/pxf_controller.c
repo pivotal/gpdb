@@ -45,10 +45,10 @@ PxfControllerCleanup(PxfFdwModifyState *pxfmstate)
 	if (pxfmstate == NULL)
 		return;
 
-	churl_cleanup(pxfmstate->curl_handle, false);
+	PxfCurlCleanup(pxfmstate->curl_handle, false);
 	pxfmstate->curl_handle = NULL;
 
-	churl_headers_cleanup(pxfmstate->curl_headers);
+	PxfCurlHeadersCleanup(pxfmstate->curl_headers);
 	pxfmstate->curl_headers = NULL;
 
 	/* TODO: do we need to cleanup filter_str for foreign scan? */
@@ -74,10 +74,10 @@ PxfControllerImportStart(PxfFdwScanState *pxfsstate)
 					 pxfsstate->filter_str,
 					 pxfsstate->retrieved_attrs);
 
-	pxfsstate->curl_handle = churl_init_download(pxfsstate->uri.data, pxfsstate->curl_headers);
+	pxfsstate->curl_handle = PxfCurlInitDownload(pxfsstate->uri.data, pxfsstate->curl_headers);
 
 	/* read some bytes to make sure the connection is established */
-	churl_read_check_connectivity(pxfsstate->curl_handle);
+	PxfCurlReadCheckConnectivity(pxfsstate->curl_handle);
 }
 
 /*
@@ -93,7 +93,7 @@ PxfControllerExportStart(PxfFdwModifyState *pxfmstate)
 					 pxfmstate->relation,
 					 NULL,
 					 NULL);
-	pxfmstate->curl_handle = churl_init_upload(pxfmstate->uri.data, pxfmstate->curl_headers);
+	pxfmstate->curl_handle = PxfCurlInitUpload(pxfmstate->uri.data, pxfmstate->curl_headers);
 }
 
 /*
@@ -116,7 +116,7 @@ PxfControllerWrite(PxfFdwModifyState *pxfmstate, char *databuf, int datalen)
 
 	if (datalen > 0)
 	{
-		n = churl_write(pxfmstate->curl_handle, databuf, datalen);
+		n = PxfCurlWrite(pxfmstate->curl_handle, databuf, datalen);
 		elog(DEBUG5, "pxf PxfControllerWrite: segment %d wrote %zu bytes to %s", PXF_SEGMENT_ID, n, pxfmstate->options->resource);
 	}
 
@@ -162,14 +162,14 @@ FillBuffer(PxfFdwScanState *pxfsstate, char *start, size_t size)
 
 	while (ptr < end)
 	{
-		n = churl_read(pxfsstate->curl_handle, ptr, end - ptr);
+		n = PxfCurlRead(pxfsstate->curl_handle, ptr, end - ptr);
 		if (n == 0)
 		{
 			/*
 			 * done processing all data - check if the
 			 * connection terminated with an error
 			 */
-			churl_read_check_connectivity(pxfsstate->curl_handle);
+			PxfCurlReadCheckConnectivity(pxfsstate->curl_handle);
 			break;
 		}
 

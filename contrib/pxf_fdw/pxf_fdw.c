@@ -600,13 +600,13 @@ pxfEndForeignScan(ForeignScanState *node)
 
 		if (pxfsstate->curl_handle)
 		{
-			churl_cleanup(pxfsstate->curl_handle, false);
+			PxfCurlCleanup(pxfsstate->curl_handle, false);
 			pxfsstate->curl_handle = NULL;
 		}
 
 		if (pxfsstate->curl_headers)
 		{
-			churl_headers_cleanup(pxfsstate->curl_headers);
+			PxfCurlHeadersCleanup(pxfsstate->curl_headers);
 			pxfsstate->curl_headers = NULL;
 		}
 	}

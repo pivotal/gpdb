@@ -39,14 +39,14 @@ typedef void *PXF_CURL_HANDLE;
  * PxfCurlHeadersAppend(http_headers, "a", "b");
  * PxfCurlHeadersAppend(http_headers, "c", "d");
  *
- * PXF_CURL_HANDLE churl = churl_init_upload("http://127.0.0.1:12345", http_headers);
+ * PXF_CURL_HANDLE churl = PxfCurlInitUpload("http://127.0.0.1:12345", http_headers);
  * while(have_stuff_to_write())
  * {
- *     churl_write(churl);
+ *     PxfCurlWrite(churl);
  * }
  *
- * churl_cleanup(churl);
- * churl_headers_cleanup(http_headers);
+ * PxfCurlCleanup(churl);
+ * PxfCurlHeadersCleanup(http_headers);
  *
  * GET example
  * -----------
@@ -55,17 +55,17 @@ typedef void *PXF_CURL_HANDLE;
  * PxfCurlHeadersAppend(http_headers, "a", "b");
  * PxfCurlHeadersAppend(http_headers, "c", "d");
  *
- * PXF_CURL_HANDLE churl = churl_init_download("http://127.0.0.1:12345", http_headers);
+ * PXF_CURL_HANDLE churl = PxfCurlInitDownload("http://127.0.0.1:12345", http_headers);
  *
  * char buf[64 * 1024];
  * size_t n = 0;
- * while ((n = churl_read(churl, buf, sizeof(buf))) != 0)
+ * while ((n = PxfCurlRead(churl, buf, sizeof(buf))) != 0)
  * {
  *     do_something(buf, n);
  * }
  *
- * churl_cleanup(churl);
- * churl_headers_cleanup(http_headers);
+ * PxfCurlCleanup(churl);
+ * PxfCurlHeadersCleanup(http_headers);
  */
 
 /*
@@ -84,7 +84,7 @@ void		PxfCurlHeadersAppend(PXF_CURL_HEADERS headers, const char *key, const char
  * If header doesn't exist, create new one (using PxfCurlHeadersAppend).
  * Headers are added in the form 'key: value'
  */
-void		churl_headers_override(PXF_CURL_HEADERS headers, const char *key, const char *value);
+void		PxfCurlHeadersOverride(PXF_CURL_HEADERS headers, const char *key, const char *value);
 
 /*
  * Remove header with given 'key'.
@@ -93,55 +93,55 @@ void		churl_headers_override(PXF_CURL_HEADERS headers, const char *key, const ch
  * If the header is the first one on the list,
  * point the headers list to the next element.
  */
-void		churl_headers_remove(PXF_CURL_HEADERS headers, const char *key, bool has_value);
+void		PxfCurlHeadersRemove(PXF_CURL_HEADERS headers, const char *key, bool has_value);
 
 /*
  * Cleanup handle for headers
  */
-void		churl_headers_cleanup(PXF_CURL_HEADERS headers);
+void		PxfCurlHeadersCleanup(PXF_CURL_HEADERS headers);
 
 /*
  * Start an upload to url
  * returns a handle to churl transfer
  */
-PXF_CURL_HANDLE churl_init_upload(const char *url, PXF_CURL_HEADERS headers);
+PXF_CURL_HANDLE PxfCurlInitUpload(const char *url, PXF_CURL_HEADERS headers);
 
 /*
  * Start a download to url
  * returns a handle to churl transfer
  */
-PXF_CURL_HANDLE churl_init_download(const char *url, PXF_CURL_HEADERS headers);
+PXF_CURL_HANDLE PxfCurlInitDownload(const char *url, PXF_CURL_HEADERS headers);
 
 /*
  * Restart a session to a new URL
  * This will use the same headers
  */
-void		churl_download_restart(PXF_CURL_HANDLE, const char *url, PXF_CURL_HEADERS headers);
+void		PxfCurlDownloadRestart(PXF_CURL_HANDLE, const char *url, PXF_CURL_HEADERS headers);
 
 /*
  * Send buf of bufsize
  */
-size_t		churl_write(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize);
+size_t		PxfCurlWrite(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize);
 
 /*
  * Receive up to max_size into buf
  */
-size_t		churl_read(PXF_CURL_HANDLE handle, char *buf, size_t max_size);
+size_t		PxfCurlRead(PXF_CURL_HANDLE handle, char *buf, size_t max_size);
 
 /*
  * Check connectivity by reading some bytes and checking response
  */
-void		churl_read_check_connectivity(PXF_CURL_HANDLE handle);
+void		PxfCurlReadCheckConnectivity(PXF_CURL_HANDLE handle);
 
 /*
  * Cleanup churl resources
  */
-void		churl_cleanup(PXF_CURL_HANDLE handle, bool after_error);
+void		PxfCurlCleanup(PXF_CURL_HANDLE handle, bool after_error);
 
 /*
  * Debug function - print the http headers
  */
-void		print_http_headers(PXF_CURL_HEADERS headers);
+void		PxfPrintHttpHeaders(PXF_CURL_HEADERS headers);
 
 #define LocalhostIpV4Entry ":127.0.0.1"
 #define LocalhostIpV4 "localhost"
