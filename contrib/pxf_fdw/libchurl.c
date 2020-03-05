@@ -765,8 +765,23 @@ fill_internal_buffer(churl_context *context, int want)
 	fd_set		fdread;
 	fd_set		fdwrite;
 	fd_set		fdexcep;
-	int			maxfd;
-	int			curl_error;
+	struct		timeval timeout;
+	int		maxfd, nfds, curl_error, timeout_count = 0;
+	long		curl_timeo = -1;
+
+	/* set a suitable timeout to fail on */
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+
+	curl_multi_timeout(context->multi_handle, &curl_timeo);
+	if (curl_timeo >= 0)
+	{
+		timeout.tv_sec = curl_timeo / 1000;
+		if (timeout.tv_sec > 1)
+			timeout.tv_sec = 1;
+		else
+			timeout.tv_usec = (curl_timeo % 1000) * 1000;
+	}
 
 	/* attempt to fill buffer */
 	while (context->curl_still_running &&
@@ -779,40 +794,54 @@ fill_internal_buffer(churl_context *context, int want)
 		/* allow canceling a query while waiting for input from remote service */
 		CHECK_FOR_INTERRUPTS();
 
-		/* set a suitable timeout to fail on */
-		long		curl_timeo = -1;
-		struct timeval timeout;
-
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-
-		curl_multi_timeout(context->multi_handle, &curl_timeo);
-		if (curl_timeo >= 0)
-		{
-			timeout.tv_sec = curl_timeo / 1000;
-			if (timeout.tv_sec > 1)
-				timeout.tv_sec = 1;
-			else
-				timeout.tv_usec = (curl_timeo % 1000) * 1000;
-		}
-
 		/* get file descriptors from the transfers */
 		curl_error = curl_multi_fdset(context->multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd);
 		if (CURLE_OK != curl_error)
+		{
 			elog(ERROR, "internal error: curl_multi_fdset failed (%d - %s)",
 				 curl_error, curl_easy_strerror(curl_error));
+		}
 
-		/* curl is not ready if maxfd -1 is returned */
-		if (maxfd == -1)
+		if (maxfd <= 0)
+		{
+			/* curl is not ready if maxfd -1 is returned */
+			elog(LOG, "curl_multi_fdset set maxfd = %d", maxfd);
+			context->curl_still_running = 0;
 			pg_usleep(100);
-		else if (-1 == select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout))
+			break;
+		}
+
+		nfds = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout);
+
+		if (nfds == -1)
 		{
 			if (errno == EINTR || errno == EAGAIN)
+			{
+				elog(DEBUG2, "select failed on curl_multi_fdset (maxfd %d) (%d - %s)", maxfd, errno, strerror(errno));
 				continue;
+			}
 			elog(ERROR, "internal error: select failed on curl_multi_fdset (maxfd %d) (%d - %s)",
 				 maxfd, errno, strerror(errno));
 		}
-		multi_perform(context);
+		else if (nfds == 0)
+		{
+			// timeout
+			timeout_count++;
+
+			if (timeout_count % 60 == 0)
+			{
+				elog(LOG, "segment has not received data from gpfdist for about 1 minute, waiting for %d bytes.",
+					(want - (context->download_buffer->top - context->download_buffer->bot)));
+			}
+		}
+		else if (nfds > 0)
+		{
+			multi_perform(context);
+		}
+		else
+		{
+			elog(ERROR, "select return unexpected result");
+		}
 	}
 }
 
@@ -1166,13 +1195,10 @@ realloc_internal_buffer(churl_buffer *buffer, size_t required)
 bool
 handle_special_error(long response, StringInfo err)
 {
-	switch (response)
+	if (response == 404)
 	{
-		case 404:
-			appendStringInfo(err, ": PXF service could not be reached. PXF is not running in the tomcat container");
-			break;
-		default:
-			return false;
+		appendStringInfo(err, ": PXF service could not be reached. PXF is not running in the tomcat container");
+		return true;
 	}
-	return true;
+	return false;
 }
