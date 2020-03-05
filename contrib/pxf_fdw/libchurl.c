@@ -316,7 +316,6 @@ churl_init(const char *url, CHURL_HEADERS headers)
 	churl_context *context = churl_new_context();
 
 	create_curl_handle(context);
-	clear_error_buffer(context);
 
 /* Required for resolving localhost on some docker environments that
  * had intermittent networking issues when using pxf on HAWQ
@@ -336,13 +335,24 @@ churl_init(const char *url, CHURL_HEADERS headers)
 #endif
 
 	set_curl_option(context, CURLOPT_URL, url);
-	set_curl_option(context, CURLOPT_VERBOSE, (const void *) FALSE);
-	set_curl_option(context, CURLOPT_ERRORBUFFER, context->curl_error_buffer);
-	set_curl_option(context, CURLOPT_IPRESOLVE, (const void *) CURL_IPRESOLVE_V4);
-	set_curl_option(context, CURLOPT_WRITEFUNCTION, write_callback);
-	set_curl_option(context, CURLOPT_WRITEDATA, context);
+
+	set_curl_option(context, CURLOPT_VERBOSE, 0L /* FALSE */);
+
+	/* set callback for each header received from server */
 	set_curl_option(context, CURLOPT_HEADERFUNCTION, header_callback);
+
 	set_curl_option(context, CURLOPT_HEADERDATA, context);
+
+	/* set callback for each data block arriving from server to be written to application */
+	set_curl_option(context, CURLOPT_WRITEFUNCTION, write_callback);
+
+	/* 'file' is the application variable that gets passed to write_callback */
+	set_curl_option(context, CURLOPT_WRITEDATA, context);
+
+	set_curl_option(context, CURLOPT_IPRESOLVE, (const void *) CURL_IPRESOLVE_V4);
+
+	set_curl_option(context, CURLOPT_ERRORBUFFER, context->curl_error_buffer);
+
 	churl_headers_set(context, headers);
 
 	return (CHURL_HANDLE) context;
