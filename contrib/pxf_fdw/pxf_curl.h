@@ -36,8 +36,8 @@ typedef void *PXF_CURL_HANDLE;
  * -----------
  *
  * PXF_CURL_HEADERS http_headers = PxfCurlHeadersInit();
- * churl_headers_append(http_headers, "a", "b");
- * churl_headers_append(http_headers, "c", "d");
+ * PxfCurlHeadersAppend(http_headers, "a", "b");
+ * PxfCurlHeadersAppend(http_headers, "c", "d");
  *
  * PXF_CURL_HANDLE churl = churl_init_upload("http://127.0.0.1:12345", http_headers);
  * while(have_stuff_to_write())
@@ -52,8 +52,8 @@ typedef void *PXF_CURL_HANDLE;
  * -----------
  *
  * PXF_CURL_HEADERS http_headers = PxfCurlHeadersInit();
- * churl_headers_append(http_headers, "a", "b");
- * churl_headers_append(http_headers, "c", "d");
+ * PxfCurlHeadersAppend(http_headers, "a", "b");
+ * PxfCurlHeadersAppend(http_headers, "c", "d");
  *
  * PXF_CURL_HANDLE churl = churl_init_download("http://127.0.0.1:12345", http_headers);
  *
@@ -77,11 +77,11 @@ PXF_CURL_HEADERS PxfCurlHeadersInit(void);
  * Add a new header
  * Headers are added in the form 'key: value'
  */
-void		churl_headers_append(PXF_CURL_HEADERS headers, const char *key, const char *value);
+void		PxfCurlHeadersAppend(PXF_CURL_HEADERS headers, const char *key, const char *value);
 
 /*
  * Override header with given 'key'.
- * If header doesn't exist, create new one (using churl_headers_append).
+ * If header doesn't exist, create new one (using PxfCurlHeadersAppend).
  * Headers are added in the form 'key: value'
  */
 void		churl_headers_override(PXF_CURL_HEADERS headers, const char *key, const char *value);

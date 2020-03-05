@@ -177,7 +177,7 @@ build_header_str(const char *format, const char *key, const char *value)
 }
 
 void
-churl_headers_append(PXF_CURL_HEADERS headers, const char *key, const char *value)
+PxfCurlHeadersAppend(PXF_CURL_HEADERS headers, const char *key, const char *value)
 {
 	churl_settings *settings = (churl_settings *) headers;
 	char	   *header_option = NULL;
@@ -230,7 +230,7 @@ churl_headers_override(PXF_CURL_HEADERS headers, const char *key, const char *va
 	}
 	else
 	{
-		churl_headers_append(headers, key, value);
+		PxfCurlHeadersAppend(headers, key, value);
 	}
 
 	pfree(key_option);
@@ -368,9 +368,9 @@ churl_init_upload(const char *url, PXF_CURL_HEADERS headers)
 	set_curl_option(context, CURLOPT_POST, (const void *) TRUE);
 	set_curl_option(context, CURLOPT_READFUNCTION, read_callback);
 	set_curl_option(context, CURLOPT_READDATA, context);
-	churl_headers_append(headers, "Content-Type", "application/octet-stream");
-	churl_headers_append(headers, "Transfer-Encoding", "chunked");
-	churl_headers_append(headers, "Expect", "100-continue");
+	PxfCurlHeadersAppend(headers, "Content-Type", "application/octet-stream");
+	PxfCurlHeadersAppend(headers, "Transfer-Encoding", "chunked");
+	PxfCurlHeadersAppend(headers, "Expect", "100-continue");
 
 	print_http_headers(headers);
 	setup_multi_handle(context);
