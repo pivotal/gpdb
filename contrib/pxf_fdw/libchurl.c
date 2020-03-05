@@ -647,11 +647,8 @@ get_dest_address(CURL * curl_handle)
 void
 enlarge_internal_buffer(churl_buffer *buffer, size_t required)
 {
-	if (buffer->ptr != NULL)
-		pfree(buffer->ptr);
-
-	buffer->max = required + 1024;
-	buffer->ptr = palloc(buffer->max);
+	buffer->max = (int) required + 1024;
+	repalloc(buffer->ptr, buffer->max);
 }
 
 /*
@@ -912,12 +909,14 @@ void
 check_response_code(churl_context *context)
 {
 	long		response_code;
-	char	   *response_text = NULL;
-	int			curl_error;
+	char		*response_text = NULL;
+	int		curl_error;
 
 	if (CURLE_OK != (curl_error = curl_easy_getinfo(context->curl_handle, CURLINFO_RESPONSE_CODE, &response_code)))
+	{
 		elog(ERROR, "internal error: curl_easy_getinfo failed(%d - %s)",
 			 curl_error, curl_easy_strerror(curl_error));
+	}
 
 	elog(DEBUG2, "http response code: %ld", response_code);
 	if ((response_code == 0) && (context->curl_still_running > 0))
