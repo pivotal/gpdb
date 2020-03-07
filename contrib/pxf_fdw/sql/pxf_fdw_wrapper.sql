@@ -147,12 +147,44 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( protocol 'pxf_fdw_test', config '/foo/bar' );
 
 --
+-- Foreign-data wrapper creation fails if negative pxf_port number is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_port '-1' );
+
+--
+-- Foreign-data wrapper creation fails if out of range pxf_port number is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_port '65536' );
+
+--
+-- Foreign-data wrapper creation fails if non numeric pxf_port number is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_port 'foo' );
+
+--
 -- Foreign-data wrapper succeeds when protocol is provided
 --
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'pxf_fdw_test', mpp_execute 'all segments' );
+
+--
+-- Foreign-data wrapper succeeds when valid pxf_port is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_port
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_port '7007' );
 
 --
 -- Foreign-data wrapper alteration fails when protocol is dropped
@@ -255,3 +287,45 @@ ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
 --
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( ADD config '/foo/bar' );
+
+--
+-- Foreign-data wrapper alteration fails if negative pxf_port number is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_port '-1' );
+
+--
+-- Foreign-data wrapper alteration fails if out of range pxf_port number is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_port '65536' );
+
+--
+-- Foreign-data wrapper alteration fails if non numeric pxf_port number is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_port 'foo' );
+
+--
+-- Foreign-data wrapper alteration succeeds if valid port number is provide
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_port '8080' );
+
+--
+-- Foreign-data wrapper alteration fails if an invalid port number is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( SET pxf_port '80808' );
+
+--
+-- Foreign-data wrapper alteration succeeds if a new valid port number is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( SET pxf_port '7777' );
+
+--
+-- Foreign-data wrapper alteration succeeds when the pxf_port option is dropped
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( DROP pxf_port );

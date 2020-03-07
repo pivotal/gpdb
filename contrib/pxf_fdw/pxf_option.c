@@ -21,6 +21,9 @@
 #include "nodes/makefuncs.h"
 #include "foreign/foreign.h"
 
+#define ENV_PXF_HOST "PXF_HOST"
+#define ENV_PXF_PORT "PXF_PORT"
+
 #define FDW_OPTION_WIRE_FORMAT_TEXT "text"
 #define FDW_OPTION_WIRE_FORMAT_CSV "csv"
 #define FDW_OPTION_WIRE_FORMAT_BINARY "binary"
@@ -128,16 +131,23 @@ static void ValidateOption(char *, Oid);
 Datum
 pxf_fdw_validator(PG_FUNCTION_ARGS)
 {
-	char	   *protocol = NULL;
-	char	   *resource = NULL;
-	char	   *reject_limit_type = FDW_OPTION_REJECT_LIMIT_ROWS;
+	char		*endptr = NULL;
+	char		*port_str = NULL;
+	char		*protocol = NULL;
+	char		*resource = NULL;
+	char		*reject_limit_type = FDW_OPTION_REJECT_LIMIT_ROWS;
 	bool		log_errors = -1;
-	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
+	List		*options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 	Oid			catalog = PG_GETARG_OID(1);
-	List	   *copy_options = NIL;
-	ListCell   *cell;
-	int			reject_limit = -1,
+	List		*copy_options = NIL;
+	ListCell	*cell;
+	int		reject_limit = -1,
 				pxf_port;
+
+	/*
+	 * Get the port string from the environment variable
+	 */
+	port_str = getenv(ENV_PXF_PORT);
 
 	foreach(cell, options_list)
 	{
@@ -179,20 +189,22 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		}
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
 		{
-			pxf_port = atoi(defGetString(def));
+			port_str = defGetString(def);
 
-			/*
-			 * TODO: a PXF service can be running on port 80 behind a load-
-			 * balancer we need to remove this restriction (i.e. kubernetes)
-			 */
-			if (pxf_port < 1024 || pxf_port > 65535)
+			if (catalog == UserMappingRelationId)
 				ereport(ERROR,
-						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg("invalid port number: %d. valid port numbers are 1024 to 65535", pxf_port)));
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("the %s option cannot be defined at the user mapping level",
+							FDW_OPTION_PXF_PORT)));
+
+			if (catalog == ForeignTableRelationId)
+				ereport(ERROR,
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("the %s option cannot be defined at the foreign table level",
+							FDW_OPTION_PXF_PORT)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT) == 0)
 		{
-			char	   *endptr = NULL;
 			char	   *pStr = defGetString(def);
 
 			reject_limit = (int) strtol(pStr, &endptr, 10);
@@ -266,6 +278,26 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
 					 errmsg("the %s option cannot be set without reject_limit", FDW_OPTION_LOG_ERRORS)));
+	}
+
+	/*
+	 * Validate port number
+	 */
+	if (port_str)
+	{
+		pxf_port = (int) strtol(port_str, &endptr, 10);
+
+		if (port_str == endptr)
+		{
+			ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+				errmsg("unable to parse pxf_port number '%s'", port_str)));
+		}
+
+		if (pxf_port < 0 || pxf_port > 65535)
+		{
+			ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+					errmsg("invalid pxf_port number: %d. valid pxf_port numbers are 0 to 65535", pxf_port)));
+		}
 	}
 
 	/*
