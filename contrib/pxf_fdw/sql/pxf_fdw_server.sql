@@ -149,6 +149,13 @@ CREATE SERVER pxf_fdw_test_server_with_port
     OPTIONS ( pxf_port '7008' );
 
 --
+-- Server creation succeeds if pxf_host is provided
+--
+CREATE SERVER pxf_fdw_test_server_with_host
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( pxf_host 'foobar.com' );
+
+--
 -- Server alteration fails if protocol option is added
 --
 ALTER SERVER pxf_fdw_test_server
@@ -297,3 +304,21 @@ ALTER SERVER pxf_fdw_test_server
 --
 ALTER SERVER pxf_fdw_test_server
     OPTIONS ( DROP pxf_port );
+
+--
+-- Server alteration succeeds when pxf_host is provided
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( ADD pxf_host 'test.com' );
+
+--
+-- Server alteration succeeds when pxf_host is set
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( SET pxf_host 'bar.com' );
+
+--
+-- Server alteration succeeds when pxf_host is dropped
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( DROP pxf_host );

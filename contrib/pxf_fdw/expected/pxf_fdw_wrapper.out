@@ -192,6 +192,13 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_port
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'pxf_fdw_test', pxf_port '7007' );
 --
+-- Foreign-data wrapper succeeds when pxf_host is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_host
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_host 'foobar.com' );
+--
 -- Foreign-data wrapper alteration fails when protocol is dropped
 --
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
@@ -342,3 +349,18 @@ ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
 --
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( DROP pxf_port );
+--
+-- Foreign-data wrapper alteration succeeds when pxf_host is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_host 'test.com' );
+--
+-- Foreign-data wrapper alteration succeeds when pxf_host is set
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_host
+    OPTIONS ( SET pxf_host 'bar.com' );
+--
+-- Foreign-data wrapper alteration succeeds when pxf_host is dropped
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_host
+    OPTIONS ( DROP pxf_host );

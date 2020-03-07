@@ -186,6 +186,13 @@ CREATE FOREIGN TABLE pxf_fdw_test_table_pxf_port ()
     OPTIONS ( resource '/foo', pxf_port '8080' );
 
 --
+-- Table creation fails if pxf_host option is provided
+--
+CREATE FOREIGN TABLE pxf_fdw_test_table_pxf_host ()
+    SERVER pxf_fdw_test_server
+    OPTIONS ( resource '/foo', pxf_host 'foorbar.com' );
+
+--
 -- Table creation succeeds if resource is provided and reject_limit is provided correctly
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_reject_limit (id int, name text)
@@ -367,3 +374,9 @@ ALTER FOREIGN TABLE pxf_fdw_test_table
 --
 ALTER FOREIGN TABLE pxf_fdw_test_table
     OPTIONS ( ADD pxf_port '8080' );
+
+--
+-- Table alteration fails if pxf_host option is provided
+--
+ALTER FOREIGN TABLE pxf_fdw_test_table
+    OPTIONS ( ADD pxf_host 'foobar.com' );

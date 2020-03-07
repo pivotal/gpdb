@@ -129,6 +129,13 @@ CREATE USER MAPPING FOR pxf_fdw_user
     OPTIONS ( pxf_port '8080' );
 
 --
+-- User mapping creation fails if pxf_host option is provided
+--
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER pxf_fdw_test_server
+    OPTIONS ( pxf_host 'foobar.com' );
+
+--
 -- User mapping creation succeeds if protocol option is not provided
 --
 CREATE USER MAPPING FOR pxf_fdw_user
@@ -260,3 +267,9 @@ ALTER USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
     OPTIONS ( ADD pxf_port '8080' );
 
+--
+-- User mapping alteration fails if pxf_host option is added
+--
+ALTER USER MAPPING FOR pxf_fdw_user
+    SERVER pxf_fdw_test_server
+    OPTIONS ( ADD pxf_host 'foobar.com' );

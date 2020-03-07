@@ -203,6 +203,20 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 						errmsg("the %s option cannot be defined at the foreign table level",
 							FDW_OPTION_PXF_PORT)));
 		}
+		else if (strcmp(def->defname, FDW_OPTION_PXF_HOST) == 0)
+		{
+			if (catalog == UserMappingRelationId)
+				ereport(ERROR,
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("the %s option cannot be defined at the user mapping level",
+							FDW_OPTION_PXF_HOST)));
+
+			if (catalog == ForeignTableRelationId)
+				ereport(ERROR,
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("the %s option cannot be defined at the foreign table level",
+							FDW_OPTION_PXF_HOST)));
+		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT) == 0)
 		{
 			char	   *pStr = defGetString(def);
