@@ -19,9 +19,6 @@
 
 #define PXF_SEGMENT_ID           GpIdentity.segindex
 #define PXF_SEGMENT_COUNT        getgpsegmentCount()
-#define PXF_FDW_DEFAULT_PROTOCOL "http"
-#define PXF_FDW_DEFAULT_HOST     "localhost"
-#define PXF_FDW_DEFAULT_PORT     5888
 
 /* in pxf_deparse.c */
 extern void deparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs);

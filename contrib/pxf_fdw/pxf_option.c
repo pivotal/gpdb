@@ -55,6 +55,11 @@
 #define FDW_COPY_OPTION_FORCE_NOT_NULL "force_not_null"
 #define FDW_COPY_OPTION_FORCE_NULL "force_null"
 
+#define PXF_FDW_DEFAULT_PROTOCOL "http"
+#define PXF_FDW_DEFAULT_HOST     "localhost"
+#define PXF_FDW_DEFAULT_PORT     5888
+#define PXF_FDW_SECURE_PROTOCOL  "https"
+
 /*
  * Describes the valid copy options for objects that use this wrapper.
  */
@@ -144,11 +149,6 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	int		reject_limit = -1,
 				pxf_port;
 
-	/*
-	 * Get the port string from the environment variable
-	 */
-	port_str = getenv(ENV_PXF_PORT);
-
 	foreach(cell, options_list)
 	{
 		DefElem    *def = (DefElem *) lfirst(cell);
@@ -189,8 +189,6 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		}
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
 		{
-			port_str = defGetString(def);
-
 			if (catalog == UserMappingRelationId)
 				ereport(ERROR,
 					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
@@ -202,6 +200,28 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
 						errmsg("the %s option cannot be defined at the foreign table level",
 							FDW_OPTION_PXF_PORT)));
+
+			port_str = defGetString(def);
+
+			/*
+			 * Validate port number
+			 */
+			if (port_str)
+			{
+				pxf_port = (int) strtol(port_str, &endptr, 10);
+
+				if (port_str == endptr)
+				{
+					ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						errmsg("unable to parse pxf_port number '%s'", port_str)));
+				}
+
+				if (pxf_port < 0 || pxf_port > 65535)
+				{
+					ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						errmsg("invalid pxf_port number: %d. valid pxf_port numbers are 0 to 65535", pxf_port)));
+				}
+			}
 		}
 		else if (strcmp(def->defname, FDW_OPTION_PXF_HOST) == 0)
 		{
@@ -292,26 +312,6 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
 					 errmsg("the %s option cannot be set without reject_limit", FDW_OPTION_LOG_ERRORS)));
-	}
-
-	/*
-	 * Validate port number
-	 */
-	if (port_str)
-	{
-		pxf_port = (int) strtol(port_str, &endptr, 10);
-
-		if (port_str == endptr)
-		{
-			ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-				errmsg("unable to parse pxf_port number '%s'", port_str)));
-		}
-
-		if (pxf_port < 0 || pxf_port > 65535)
-		{
-			ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-					errmsg("invalid pxf_port number: %d. valid pxf_port numbers are 0 to 65535", pxf_port)));
-		}
 	}
 
 	/*
@@ -412,17 +412,18 @@ ValidateCopyOptions(List *options_list, Oid catalog)
 PxfOptions *
 PxfGetOptions(Oid foreigntableid)
 {
-	Node *wireFormat;
-	UserMapping *user;
-	ForeignTable *table;
-	ForeignServer *server;
-	ForeignDataWrapper *wrapper;
-	List	   *options;
-	PxfOptions *opt;
-	ListCell   *lc;
-	List	   *copy_options,
-			   *other_options,
-			   *other_option_name_strings = NULL;
+	char			*port_str = NULL;
+	Node			*wireFormat;
+	UserMapping		*user;
+	ForeignTable		*table;
+	ForeignServer		*server;
+	ForeignDataWrapper	*wrapper;
+	List			*options;
+	PxfOptions		*opt;
+	ListCell		*lc;
+	List			*copy_options,
+				*other_options,
+				*other_option_name_strings = NULL;
 
 	opt = (PxfOptions *) palloc(sizeof(PxfOptions));
 	memset(opt, 0, sizeof(PxfOptions));
@@ -433,6 +434,17 @@ PxfGetOptions(Oid foreigntableid)
 	opt->reject_limit = -1;
 	opt->is_reject_limit_rows = true;
 	opt->log_errors = false;
+
+	/*
+	 * Get the port string from the environment variable
+	 * This is for backwards compatibility to support migrations from the PXF
+	 * external table code, which read the pxf_port and pxf_host from
+	 * environment variables
+	 */
+	port_str = getenv(ENV_PXF_PORT);
+
+	if (port_str)
+		opt->pxf_port = atoi(port_str);
 
 	/*
 	 * Extract options from FDW objects.
