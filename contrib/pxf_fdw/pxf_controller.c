@@ -74,7 +74,7 @@ PxfControllerImportStart(PxfFdwScanState *pxfsstate)
 					 pxfsstate->filter_str,
 					 pxfsstate->retrieved_attrs);
 
-	pxfsstate->curl_handle = PxfCurlInitDownload(pxfsstate->uri.data, pxfsstate->curl_headers);
+	pxfsstate->curl_handle = PxfCurlInitDownload(pxfsstate->uri.data, pxfsstate->curl_headers, pxfsstate->options->ssl_options);
 
 	/* read some bytes to make sure the connection is established */
 	PxfCurlReadCheckConnectivity(pxfsstate->curl_handle);
@@ -93,7 +93,7 @@ PxfControllerExportStart(PxfFdwModifyState *pxfmstate)
 					 pxfmstate->relation,
 					 NULL,
 					 NULL);
-	pxfmstate->curl_handle = PxfCurlInitUpload(pxfmstate->uri.data, pxfmstate->curl_headers);
+	pxfmstate->curl_handle = PxfCurlInitUpload(pxfmstate->uri.data, pxfmstate->curl_headers, pxfmstate->options->ssl_options);
 }
 
 /*

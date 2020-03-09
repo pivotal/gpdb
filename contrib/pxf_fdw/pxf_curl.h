@@ -32,6 +32,21 @@ typedef void *PXF_CURL_HEADERS;
 typedef void *PXF_CURL_HANDLE;
 
 /*
+ * Structure to store the PXF SSL options
+ */
+typedef struct PxfSSLOptions
+{
+	/* SSL options */
+	bool		verbose; /* true to enable CURL's SSL library to display a lot of verbose information about its operations, false otherwise */
+	bool		disable_verification;	/* true if certificate and host verification is disabled, false otherwise */
+	char	   *client_cert_path;	/* full path to the cert for client authentication */
+	char	   *private_key_password;	/* password for the private key file */
+	char	   *private_key_path;	/* full path to the private key file */
+	char	   *trusted_ca_path;	/* full path to the trusted certificate authorities file */
+	int		version;	/* the SSL version (defaults to TLSv1 <TLS 1.x>) */
+} PxfSSLOptions;
+
+/*
  * PUT example
  * -----------
  *
@@ -104,13 +119,13 @@ void		PxfCurlHeadersCleanup(PXF_CURL_HEADERS headers);
  * Start an upload to url
  * returns a handle to churl transfer
  */
-PXF_CURL_HANDLE PxfCurlInitUpload(const char *url, PXF_CURL_HEADERS headers);
+PXF_CURL_HANDLE PxfCurlInitUpload(const char *url, PXF_CURL_HEADERS headers, PxfSSLOptions *ssl_options);
 
 /*
  * Start a download to url
  * returns a handle to churl transfer
  */
-PXF_CURL_HANDLE PxfCurlInitDownload(const char *url, PXF_CURL_HEADERS headers);
+PXF_CURL_HANDLE PxfCurlInitDownload(const char *url, PXF_CURL_HEADERS headers, PxfSSLOptions *ssl_options);
 
 /*
  * Restart a session to a new URL

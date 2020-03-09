@@ -79,7 +79,7 @@ typedef struct curl_context
 
 	/* true on upload, false on download */
 	bool		upload;
-} churl_context;
+} curl_context;
 
 /*
  * holds http header properties
@@ -89,37 +89,43 @@ typedef struct churl_settings
 	struct curl_slist *headers;
 } churl_settings;
 
+#define SSL_NO_VERIFY	0L
+#define SSL_VERIFYPEER	1L
+#define SSL_VERIFYHOST	2L
+#define PROTOCOL_HTTPS	"https://"
 
-static churl_context	*CurlNewContext(void);
-static void	CreateCurlHandle(churl_context *context);
-static void	SetCurlOption(churl_context *context, CURLoption option, const void *data);
+#define IS_HTTPS_URI(uri_str) (pg_strncasecmp(uri_str, PROTOCOL_HTTPS, strlen(PROTOCOL_HTTPS)) == 0)
+
+static curl_context	*CurlNewContext(void);
+static void	CreateCurlHandle(curl_context *context);
+static void	SetCurlOption(curl_context *context, CURLoption option, const void *data);
 static size_t	ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata);
-static void	SetupMultiHandle(churl_context *context);
-static void	MultiPerform(churl_context *context);
+static void	SetupMultiHandle(curl_context *context);
+static void	MultiPerform(curl_context *context);
 static bool	InternalBufferLargeEnough(curl_buffer *buffer, size_t required);
-static void	FlushInternalBuffer(churl_context *context);
+static void	FlushInternalBuffer(curl_context *context);
 static char	*GetDestAddress(CURL * curl_handle);
 static void	EnlargeInternalBuffer(curl_buffer *buffer, size_t required);
-static void	FinishUpload(churl_context *context);
-static void	CleanupCurlHandle(churl_context *context);
-static void	MultiRemoveHandle(churl_context *context);
+static void	FinishUpload(curl_context *context);
+static void	CleanupCurlHandle(curl_context *context);
+static void	MultiRemoveHandle(curl_context *context);
 static void	CleanupInternalBuffer(curl_buffer *buffer);
-static void	CurlCleanupContext(churl_context *context);
+static void	CurlCleanupContext(curl_context *context);
 static size_t	WriteCallback(char *buffer, size_t size, size_t nitems, void *userp);
-static void	FillInternalBuffer(churl_context *context, int want);
-static void	CurlHeadersSet(churl_context *context, PXF_CURL_HEADERS settings);
-static void	CheckResponseStatus(churl_context *context);
-static void	CheckResponseCode(churl_context *context);
-static void	CheckResponse(churl_context *context);
-static void	ClearErrorBuffer(churl_context *context);
+static void	FillInternalBuffer(curl_context *context, int want);
+static void	CurlHeadersSet(curl_context *context, PXF_CURL_HEADERS settings);
+static void	CheckResponseStatus(curl_context *context);
+static void	CheckResponseCode(curl_context *context);
+static void	CheckResponse(curl_context *context);
+static void	ClearErrorBuffer(curl_context *context);
 static size_t	HeaderCallback(char *buffer, size_t size, size_t nitems, void *userp);
-static void	FreeHttpResponse(churl_context *context);
+static void	FreeHttpResponse(curl_context *context);
 static void	CompactInternalBuffer(curl_buffer *buffer);
 static void	ReallocInternalBuffer(curl_buffer *buffer, size_t required);
 static bool	HandleSpecialError(long response, StringInfo err);
 static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer);
 static char	*BuildHeaderStr(const char *format, const char *key, const char *value);
-
+static bool	FileExistsAndCanRead(char *filename);
 
 /*
  * Debug function - print the http headers
@@ -311,9 +317,10 @@ PxfCurlHeadersCleanup(PXF_CURL_HEADERS headers)
 }
 
 static PXF_CURL_HANDLE
-churl_init(const char *url, PXF_CURL_HEADERS headers)
+PxfCurlInit(const char *url, PXF_CURL_HEADERS headers, PxfSSLOptions *ssl_options)
 {
-	churl_context *context = CurlNewContext();
+	int		curl_error;
+	curl_context *context = CurlNewContext();
 
 	CreateCurlHandle(context);
 	ClearErrorBuffer(context);
@@ -342,27 +349,103 @@ churl_init(const char *url, PXF_CURL_HEADERS headers)
 	/* set callback for each header received from server */
 	SetCurlOption(context, CURLOPT_HEADERFUNCTION, HeaderCallback);
 
+	/* set callback context for each header received from server */
 	SetCurlOption(context, CURLOPT_HEADERDATA, context);
 
 	/* set callback for each data block arriving from server to be written to application */
 	SetCurlOption(context, CURLOPT_WRITEFUNCTION, WriteCallback);
 
-	/* 'file' is the application variable that gets passed to WriteCallback */
+	/* set callback context for each data block arriving from server to be written to application */
 	SetCurlOption(context, CURLOPT_WRITEDATA, context);
 
 	SetCurlOption(context, CURLOPT_IPRESOLVE, (const void *) CURL_IPRESOLVE_V4);
 
+	/* curl will save its last error in curl_error_buffer */
 	SetCurlOption(context, CURLOPT_ERRORBUFFER, context->curl_error_buffer);
 
 	CurlHeadersSet(context, headers);
+
+	/*
+	 * SSL configuration
+	 */
+	if (IS_HTTPS_URI(url))
+	{
+		/* cert is stored PEM coded in file... */
+		SetCurlOption(context, CURLOPT_SSLCERTTYPE, "PEM");
+
+		/* set the cert for client authentication */
+		if (ssl_options->client_cert_path != NULL)
+		{
+			elog(LOG, "attempting to load client certificate from %s", ssl_options->client_cert_path);
+
+			if (!FileExistsAndCanRead(ssl_options->client_cert_path))
+				ereport(ERROR,
+					(errcode(errcode_for_file_access()),
+						errmsg("could not open client certificate file \"%s\": %m", ssl_options->client_cert_path)));
+
+			SetCurlOption(context, CURLOPT_SSLCERT, ssl_options->client_cert_path);
+		}
+
+		/* set the key passphrase */
+		if (ssl_options->private_key_password != NULL)
+			SetCurlOption(context, CURLOPT_KEYPASSWD, ssl_options->private_key_password);
+
+		SetCurlOption(context, CURLOPT_SSLKEYTYPE,"PEM");
+
+		/* set the private key (file or ID in engine) */
+		if (ssl_options->private_key_path != NULL)
+		{
+			elog(LOG, "attempting to load private key file from %s", ssl_options->private_key_path);
+
+			if (!FileExistsAndCanRead(ssl_options->private_key_path))
+				ereport(ERROR,
+					(errcode(errcode_for_file_access()),
+						errmsg("could not open private key file \"%s\": %m", ssl_options->private_key_path)));
+
+			SetCurlOption(context, CURLOPT_SSLKEY, ssl_options->private_key_path);
+		}
+
+		/* set the file with the CA certificates, for validating the server */
+		if (ssl_options->trusted_ca_path != NULL)
+		{
+			elog(LOG, "attempting to load trusted certificate authorities file from %s", ssl_options->trusted_ca_path);
+
+			if (!FileExistsAndCanRead(ssl_options->trusted_ca_path))
+				ereport(ERROR,
+					(errcode(errcode_for_file_access()),
+						errmsg("could not open trusted certificate authorities file \"%s\": %m", ssl_options->trusted_ca_path)));
+
+			SetCurlOption(context, CURLOPT_CAINFO, ssl_options->trusted_ca_path);
+		}
+
+		/* set cert verification */
+		SetCurlOption(context, CURLOPT_SSL_VERIFYPEER, (const void *) (!ssl_options->disable_verification ? SSL_VERIFYPEER : SSL_NO_VERIFY));
+
+		/* set host verification */
+		SetCurlOption(context, CURLOPT_SSL_VERIFYHOST, (const void *) (!ssl_options->disable_verification ? SSL_VERIFYHOST : SSL_NO_VERIFY));
+
+		/* set protocol */
+		SetCurlOption(context, CURLOPT_SSLVERSION, ssl_options->version);
+
+		/* disable session ID cache */
+		SetCurlOption(context, CURLOPT_SSL_SESSIONID_CACHE, 0);
+
+		/* set debug */
+		if (CURLE_OK != (curl_error = curl_easy_setopt(context->curl_handle, CURLOPT_VERBOSE, (ssl_options->verbose ? 1L : 0L))) &&
+			ssl_options->verbose)
+		{
+			elog(INFO, "internal error: curl_easy_setopt CURLOPT_VERBOSE error (%d - %s)",
+				 curl_error, curl_easy_strerror(curl_error));
+		}
+	}
 
 	return (PXF_CURL_HANDLE) context;
 }
 
 PXF_CURL_HANDLE
-PxfCurlInitUpload(const char *url, PXF_CURL_HEADERS headers)
+PxfCurlInitUpload(const char *url, PXF_CURL_HEADERS headers, PxfSSLOptions *ssl_options)
 {
-	churl_context *context = churl_init(url, headers);
+	curl_context *context = PxfCurlInit(url, headers, ssl_options);
 
 	context->upload = true;
 
@@ -379,9 +462,9 @@ PxfCurlInitUpload(const char *url, PXF_CURL_HEADERS headers)
 }
 
 PXF_CURL_HANDLE
-PxfCurlInitDownload(const char *url, PXF_CURL_HEADERS headers)
+PxfCurlInitDownload(const char *url, PXF_CURL_HEADERS headers, PxfSSLOptions *ssl_options)
 {
-	churl_context *context = churl_init(url, headers);
+	curl_context *context = PxfCurlInit(url, headers, ssl_options);
 
 	context->upload = false;
 
@@ -393,7 +476,7 @@ PxfCurlInitDownload(const char *url, PXF_CURL_HEADERS headers)
 void
 PxfCurlDownloadRestart(PXF_CURL_HANDLE handle, const char *url, PXF_CURL_HEADERS headers)
 {
-	churl_context *context = (churl_context *) handle;
+	curl_context *context = (curl_context *) handle;
 
 	Assert(!context->upload);
 
@@ -417,7 +500,7 @@ PxfCurlDownloadRestart(PXF_CURL_HANDLE handle, const char *url, PXF_CURL_HEADERS
 size_t
 PxfCurlWrite(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize)
 {
-	churl_context *context = (churl_context *) handle;
+	curl_context *context = (curl_context *) handle;
 	curl_buffer *context_buffer = context->upload_buffer;
 
 	Assert(context->upload);
@@ -441,7 +524,7 @@ PxfCurlWrite(PXF_CURL_HANDLE handle, const char *buf, size_t bufsize)
 void
 PxfCurlReadCheckConnectivity(PXF_CURL_HANDLE handle)
 {
-	churl_context *context = (churl_context *) handle;
+	curl_context *context = (curl_context *) handle;
 
 	Assert(!context->upload);
 
@@ -456,7 +539,7 @@ size_t
 PxfCurlRead(PXF_CURL_HANDLE handle, char *buf, size_t max_size)
 {
 	int			n = 0;
-	churl_context *context = (churl_context *) handle;
+	curl_context *context = (curl_context *) handle;
 	curl_buffer *context_buffer = context->download_buffer;
 
 	Assert(!context->upload);
@@ -484,7 +567,7 @@ PxfCurlRead(PXF_CURL_HANDLE handle, char *buf, size_t max_size)
 void
 PxfCurlCleanup(PXF_CURL_HANDLE handle, bool after_error)
 {
-	churl_context *context = (churl_context *) handle;
+	curl_context *context = (curl_context *) handle;
 
 	if (!context)
 		return;
@@ -504,10 +587,10 @@ PxfCurlCleanup(PXF_CURL_HANDLE handle, bool after_error)
 	CurlCleanupContext(context);
 }
 
-static churl_context *
+static curl_context *
 CurlNewContext()
 {
-	churl_context *context = palloc0(sizeof(churl_context));
+	curl_context *context = palloc0(sizeof(curl_context));
 
 	context->download_buffer = palloc0(sizeof(curl_buffer));
 	context->upload_buffer = palloc0(sizeof(curl_buffer));
@@ -515,7 +598,7 @@ CurlNewContext()
 }
 
 static void
-ClearErrorBuffer(churl_context *context)
+ClearErrorBuffer(curl_context *context)
 {
 	if (!context)
 		return;
@@ -523,7 +606,7 @@ ClearErrorBuffer(churl_context *context)
 }
 
 static void
-CreateCurlHandle(churl_context *context)
+CreateCurlHandle(curl_context *context)
 {
 	context->curl_handle = curl_easy_init();
 	if (!context->curl_handle)
@@ -531,9 +614,9 @@ CreateCurlHandle(churl_context *context)
 }
 
 static void
-SetCurlOption(churl_context *context, CURLoption option, const void *data)
+SetCurlOption(curl_context *context, CURLoption option, const void *data)
 {
-	int			curl_error;
+	int		curl_error;
 
 	if (CURLE_OK != (curl_error = curl_easy_setopt(context->curl_handle, option, data)))
 		elog(ERROR, "internal error: curl_easy_setopt %d error (%d - %s)",
@@ -548,7 +631,7 @@ SetCurlOption(churl_context *context, CURLoption option, const void *data)
 static size_t
 ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
-	churl_context *context = (churl_context *) userdata;
+	curl_context *context = (curl_context *) userdata;
 	curl_buffer *context_buffer = context->upload_buffer;
 
 	int			written = Min(size * nmemb, context_buffer->top - context_buffer->bot);
@@ -563,9 +646,9 @@ ReadCallback(void *ptr, size_t size, size_t nmemb, void *userdata)
  * Setups the libcurl multi API
  */
 static void
-SetupMultiHandle(churl_context *context)
+SetupMultiHandle(curl_context *context)
 {
-	int			curl_error;
+	int		curl_error;
 
 	/* Create multi handle on first use */
 	if (!context->multi_handle)
@@ -589,7 +672,7 @@ SetupMultiHandle(churl_context *context)
  * callbacks are called.
  */
 static void
-MultiPerform(churl_context *context)
+MultiPerform(curl_context *context)
 {
 	int			curl_error;
 
@@ -608,7 +691,7 @@ InternalBufferLargeEnough(curl_buffer *buffer, size_t required)
 }
 
 static void
-FlushInternalBuffer(churl_context *context)
+FlushInternalBuffer(curl_context *context)
 {
 	curl_buffer *context_buffer = context->upload_buffer;
 
@@ -667,7 +750,7 @@ EnlargeInternalBuffer(curl_buffer *buffer, size_t required)
  * calling perform repeatedly
  */
 static void
-FinishUpload(churl_context *context)
+FinishUpload(curl_context *context)
 {
 	if (!context->multi_handle)
 		return;
@@ -685,7 +768,7 @@ FinishUpload(churl_context *context)
 }
 
 static void
-CleanupCurlHandle(churl_context *context)
+CleanupCurlHandle(curl_context *context)
 {
 	if (!context->curl_handle)
 		return;
@@ -698,7 +781,7 @@ CleanupCurlHandle(churl_context *context)
 }
 
 static void
-MultiRemoveHandle(churl_context *context)
+MultiRemoveHandle(curl_context *context)
 {
 	int			curl_error;
 
@@ -724,7 +807,7 @@ CleanupInternalBuffer(curl_buffer *buffer)
 }
 
 static void
-CurlCleanupContext(churl_context *context)
+CurlCleanupContext(curl_context *context)
 {
 	if (context)
 	{
@@ -749,7 +832,7 @@ CurlCleanupContext(churl_context *context)
 static size_t
 WriteCallback(char *buffer, size_t size, size_t nitems, void *userp)
 {
-	churl_context *context = (churl_context *) userp;
+	curl_context *context = (curl_context *) userp;
 	curl_buffer *context_buffer = context->download_buffer;
 	const int	nbytes = size * nitems;
 
@@ -772,7 +855,7 @@ WriteCallback(char *buffer, size_t size, size_t nitems, void *userp)
  * returns when size reached or transfer ended
  */
 static void
-FillInternalBuffer(churl_context *context, int want)
+FillInternalBuffer(curl_context *context, int want)
 {
 	fd_set		fdread;
 	fd_set		fdwrite;
@@ -850,7 +933,7 @@ FillInternalBuffer(churl_context *context, int want)
 }
 
 static void
-CurlHeadersSet(churl_context *context, PXF_CURL_HEADERS headers)
+CurlHeadersSet(curl_context *context, PXF_CURL_HEADERS headers)
 {
 	churl_settings *settings = (churl_settings *) headers;
 
@@ -862,7 +945,7 @@ CurlHeadersSet(churl_context *context, PXF_CURL_HEADERS headers)
  * with a valid response status and code.
  */
 static void
-CheckResponse(churl_context *context)
+CheckResponse(curl_context *context)
 {
 	CheckResponseCode(context);
 	CheckResponseStatus(context);
@@ -875,7 +958,7 @@ CheckResponse(churl_context *context)
  * and so have an error status.
  */
 static void
-CheckResponseStatus(churl_context *context)
+CheckResponseStatus(curl_context *context)
 {
 	CURLMsg    *msg;			/* for picking up messages with the transfer
 								 * status */
@@ -913,7 +996,7 @@ CheckResponseStatus(churl_context *context)
  * reports if different than 200 and 100
  */
 static void
-CheckResponseCode(churl_context *context)
+CheckResponseCode(curl_context *context)
 {
 	long		response_code;
 	char		*response_text = NULL;
@@ -1137,7 +1220,7 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
 }
 
 static void
-FreeHttpResponse(churl_context *context)
+FreeHttpResponse(curl_context *context)
 {
 	if (!context->last_http_reponse)
 		return;
@@ -1154,7 +1237,7 @@ static size_t
 HeaderCallback(char *buffer, size_t size, size_t nitems, void *userp)
 {
 	const int	nbytes = size * nitems;
-	churl_context *context = (churl_context *) userp;
+	curl_context *context = (curl_context *) userp;
 
 	if (context->last_http_reponse)
 		return nbytes;
@@ -1209,4 +1292,16 @@ HandleSpecialError(long response, StringInfo err)
 		return true;
 	}
 	return false;
+}
+
+static bool
+FileExistsAndCanRead(char *filename)
+{
+	FILE* file;
+	if ((file = fopen(filename, "r")) > 0)
+	{
+		fclose(file);
+		return 1;
+	}
+	return 0;
 }

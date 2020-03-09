@@ -8,13 +8,15 @@
 
 #include "postgres.h"
 
+#include "pxf_curl.h"
 #include "nodes/pg_list.h"
 
 #ifndef _PXF_OPTION_H_
 #define _PXF_OPTION_H_
 
 /*
- * Structure to store the PXF options */
+ * Structure to store the PXF options
+ */
 typedef struct PxfOptions
 {
 	/* PXF service options */
@@ -46,6 +48,9 @@ typedef struct PxfOptions
 	List	   *options;		/* merged options, excluding COPY, protocol,
 								 * resource, format, wire_format, pxf_port,
 								 * pxf_host, and pxf_protocol */
+
+	/* SSL options */
+	PxfSSLOptions	 *ssl_options; /* SSL options for CURL */
 } PxfOptions;
 
 /* Functions prototypes for pxf_option.c file */

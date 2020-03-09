@@ -58,6 +58,11 @@ CREATE FOREIGN DATA WRAPPER file_pxf_fdw
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'localfile', mpp_execute 'all segments' );
 
+CREATE FOREIGN DATA WRAPPER demo_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'demo', mpp_execute 'all segments' );
+
 COMMENT ON FOREIGN DATA WRAPPER jdbc_pxf_fdw
 IS 'PXF JDBC foreign data wrapper';
 
@@ -84,3 +89,6 @@ COMMENT ON FOREIGN DATA WRAPPER wasbs_pxf_fdw
 
 COMMENT ON FOREIGN DATA WRAPPER file_pxf_fdw
     IS 'PXF File foreign data wrapper';
+
+COMMENT ON FOREIGN DATA WRAPPER demo_pxf_fdw
+    IS 'PXF Demo foreign data wrapper. Quickly test PXF without configuring any external access';

@@ -8,6 +8,8 @@
 
 #include "postgres.h"
 
+#include <curl/curl.h>
+
 #include "pxf_fdw.h"
 #include "pxf_option.h"
 
@@ -42,6 +44,17 @@
 #define FDW_OPTION_REJECT_LIMIT "reject_limit"
 #define FDW_OPTION_REJECT_LIMIT_TYPE "reject_limit_type"
 #define FDW_OPTION_RESOURCE "resource"
+
+/*
+ * SSL Options
+ */
+#define FDW_OPTION_SSL_VERBOSE "ssl_verbose"
+#define FDW_OPTION_SSL_DISABLE_VERIFICATION "ssl_disable_verification"
+#define FDW_OPTION_SSL_CLIENT_CERT_PATH "ssl_client_cert_path"
+#define FDW_OPTION_SSL_PRIVATE_KEY_PASSWORD "ssl_private_key_password"
+#define FDW_OPTION_SSL_PRIVATE_KEY_PATH "ssl_private_key_path"
+#define FDW_OPTION_SSL_TRUSTED_CA_PATH "ssl_trusted_ca_path"
+#define FDW_OPTION_SSL_VERSION "ssl_version"
 
 #define FDW_COPY_OPTION_FORMAT "format"
 #define FDW_COPY_OPTION_HEADER "header"
@@ -148,6 +161,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	ListCell	*cell;
 	int		reject_limit = -1,
 				pxf_port;
+
+	// TODO: validate SSL options
 
 	foreach(cell, options_list)
 	{
@@ -434,7 +449,8 @@ PxfOptions *
 PxfGetOptions(Oid foreigntableid)
 {
 	char			*port_str = NULL,
-				*host_str = NULL;
+				*host_str = NULL,
+				*ssl_version = NULL;
 	Node			*wireFormat;
 	UserMapping		*user;
 	ForeignTable		*table;
@@ -456,6 +472,9 @@ PxfGetOptions(Oid foreigntableid)
 	opt->reject_limit = -1;
 	opt->is_reject_limit_rows = true;
 	opt->log_errors = false;
+
+	opt->ssl_options = (PxfSSLOptions *) palloc(sizeof(PxfSSLOptions));
+	memset(opt->ssl_options, 0, sizeof(PxfSSLOptions));
 
 	/*
 	 * Get the port and host strings from the environment variables
@@ -509,9 +528,21 @@ PxfGetOptions(Oid foreigntableid)
 		else if (strcmp(def->defname, FDW_OPTION_LOG_ERRORS) == 0)
 			opt->log_errors = defGetBoolean(def);
 		else if (strcmp(def->defname, FDW_OPTION_FORMAT) == 0)
-		{
 			opt->format = defGetString(def);
-		}
+		else if (strcmp(def->defname, FDW_OPTION_SSL_VERBOSE) == 0)
+			opt->ssl_options->verbose = defGetBoolean(def);
+		else if (strcmp(def->defname, FDW_OPTION_SSL_DISABLE_VERIFICATION) == 0)
+			opt->ssl_options->disable_verification = defGetBoolean(def);
+		else if (strcmp(def->defname, FDW_OPTION_SSL_CLIENT_CERT_PATH) == 0)
+			opt->ssl_options->client_cert_path = defGetString(def);
+		else if (strcmp(def->defname, FDW_OPTION_SSL_PRIVATE_KEY_PASSWORD) == 0)
+			opt->ssl_options->private_key_password = defGetString(def);
+		else if (strcmp(def->defname, FDW_OPTION_SSL_PRIVATE_KEY_PATH) == 0)
+			opt->ssl_options->private_key_path = defGetString(def);
+		else if (strcmp(def->defname, FDW_OPTION_SSL_TRUSTED_CA_PATH) == 0)
+			opt->ssl_options->trusted_ca_path = defGetString(def);
+		else if (strcmp(def->defname, FDW_OPTION_SSL_VERSION) == 0)
+			ssl_version = defGetString(def);
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
 		else
@@ -539,13 +570,9 @@ PxfGetOptions(Oid foreigntableid)
 	opt->wire_format = "TEXT";
 
 	if (opt->format && pg_strcasecmp(opt->format, FDW_OPTION_WIRE_FORMAT_TEXT) == 0)
-	{
 		wireFormat = (Node *) makeString(FDW_OPTION_WIRE_FORMAT_TEXT);
-	}
 	else if (opt->format && pg_strcasecmp(opt->format, FDW_OPTION_WIRE_FORMAT_CSV) == 0)
-	{
 		wireFormat = (Node *) makeString(FDW_OPTION_WIRE_FORMAT_CSV);
-	}
 	else
 	{
 		/* default wire_format is binary */
@@ -572,6 +599,16 @@ PxfGetOptions(Oid foreigntableid)
 
 	if (!opt->pxf_protocol)
 		opt->pxf_protocol = PXF_FDW_DEFAULT_PROTOCOL;
+
+	if (pg_strcasecmp(opt->pxf_protocol, PXF_FDW_SECURE_PROTOCOL) == 0)
+	{
+		if (!ssl_version)
+			opt->ssl_options->version = CURL_SSLVERSION_TLSv1;
+		// TODO: parse ssl_version string into one of CURL_SSLVERSION_DEFAULT,
+		//  CURL_SSLVERSION_TLSv1, CURL_SSLVERSION_SSLv2, CURL_SSLVERSION_SSLv3,
+		//  CURL_SSLVERSION_TLSv1_0, CURL_SSLVERSION_TLSv1_1,
+		//  CURL_SSLVERSION_TLSv1_2, CURL_SSLVERSION_TLSv1_3
+	}
 
 	return opt;
 }
