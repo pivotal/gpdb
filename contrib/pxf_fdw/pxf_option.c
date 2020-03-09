@@ -433,7 +433,8 @@ ValidateCopyOptions(List *options_list, Oid catalog)
 PxfOptions *
 PxfGetOptions(Oid foreigntableid)
 {
-	char			*port_str = NULL;
+	char			*port_str = NULL,
+				*host_str = NULL;
 	Node			*wireFormat;
 	UserMapping		*user;
 	ForeignTable		*table;
@@ -457,15 +458,19 @@ PxfGetOptions(Oid foreigntableid)
 	opt->log_errors = false;
 
 	/*
-	 * Get the port string from the environment variable
+	 * Get the port and host strings from the environment variables
 	 * This is for backwards compatibility to support migrations from the PXF
 	 * external table code, which read the pxf_port and pxf_host from
 	 * environment variables
 	 */
 	port_str = getenv(ENV_PXF_PORT);
+	host_str = getenv(ENV_PXF_HOST);
 
 	if (port_str)
 		opt->pxf_port = atoi(port_str);
+
+	if (host_str)
+		opt->pxf_host = host_str;
 
 	/*
 	 * Extract options from FDW objects.
@@ -489,7 +494,6 @@ PxfGetOptions(Oid foreigntableid)
 
 		if (strcmp(def->defname, FDW_OPTION_PXF_HOST) == 0)
 			opt->pxf_host = defGetString(def);
-
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
 			opt->pxf_port = atoi(defGetString(def));
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PROTOCOL) == 0)
