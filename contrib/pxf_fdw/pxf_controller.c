@@ -133,7 +133,7 @@ BuildUriForRead(PxfFdwScanState *pxfsstate)
 	Assert(options->pxf_host != NULL && options->pxf_port > 0);
 
 	resetStringInfo(&pxfsstate->uri);
-	appendStringInfo(&pxfsstate->uri, "http://%s:%d/%s/%s/Controller", options->pxf_host, options->pxf_port, PXF_SERVICE_PREFIX, PXF_VERSION);
+	appendStringInfo(&pxfsstate->uri, "%s://%s:%d/%s/%s/Controller", options->pxf_protocol, options->pxf_host, options->pxf_port, PXF_SERVICE_PREFIX, PXF_VERSION);
 	elog(DEBUG2, "pxf_fdw: uri %s for read", pxfsstate->uri.data);
 }
 
@@ -146,7 +146,7 @@ BuildUriForWrite(PxfFdwModifyState *pxfmstate)
 	PxfOptions *options = pxfmstate->options;
 
 	resetStringInfo(&pxfmstate->uri);
-	appendStringInfo(&pxfmstate->uri, "http://%s/%s/%s/Writable/stream", psprintf("%s:%d", options->pxf_host, options->pxf_port), PXF_SERVICE_PREFIX, PXF_VERSION);
+	appendStringInfo(&pxfmstate->uri, "%s://%s/%s/%s/Writable/stream", options->pxf_protocol, psprintf("%s:%d", options->pxf_host, options->pxf_port), PXF_SERVICE_PREFIX, PXF_VERSION);
 	elog(DEBUG2, "pxf_fdw: uri %s with file name for write: %s", pxfmstate->uri.data, options->resource);
 }
 
