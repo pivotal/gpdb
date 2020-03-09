@@ -193,6 +193,13 @@ CREATE FOREIGN TABLE pxf_fdw_test_table_pxf_host ()
     OPTIONS ( resource '/foo', pxf_host 'foorbar.com' );
 
 --
+-- Table creation fails if pxf_protocol option is provided
+--
+CREATE FOREIGN TABLE pxf_fdw_test_table_pxf_protocol ()
+    SERVER pxf_fdw_test_server
+    OPTIONS ( resource '/foo', pxf_protocol 'httpS' );
+
+--
 -- Table creation succeeds if resource is provided and reject_limit is provided correctly
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_reject_limit (id int, name text)
@@ -380,3 +387,9 @@ ALTER FOREIGN TABLE pxf_fdw_test_table
 --
 ALTER FOREIGN TABLE pxf_fdw_test_table
     OPTIONS ( ADD pxf_host 'foobar.com' );
+
+--
+-- Table alteration fails if pxf_protocol option is provided
+--
+ALTER FOREIGN TABLE pxf_fdw_test_table
+    OPTIONS ( ADD pxf_protocol 'ANY-VALUE' );

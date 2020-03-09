@@ -237,6 +237,27 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 						errmsg("the %s option cannot be defined at the foreign table level",
 							FDW_OPTION_PXF_HOST)));
 		}
+		else if (strcmp(def->defname, FDW_OPTION_PXF_PROTOCOL) == 0)
+		{
+			char *pxf_protocol = defGetString(def);
+
+			if (catalog == UserMappingRelationId)
+				ereport(ERROR,
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("the %s option cannot be defined at the user mapping level",
+							FDW_OPTION_PXF_PROTOCOL)));
+
+			if (catalog == ForeignTableRelationId)
+				ereport(ERROR,
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("the %s option cannot be defined at the foreign table level",
+							FDW_OPTION_PXF_PROTOCOL)));
+
+			if (pg_strcasecmp(pxf_protocol, PXF_FDW_DEFAULT_PROTOCOL) != 0 &&
+				pg_strcasecmp(pxf_protocol, PXF_FDW_SECURE_PROTOCOL) != 0)
+				ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+					errmsg("invalid pxf_protocol value '%s'. valid pxf_protocol values are 'http' or 'https'", pxf_protocol)));
+		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT) == 0)
 		{
 			char	   *pStr = defGetString(def);

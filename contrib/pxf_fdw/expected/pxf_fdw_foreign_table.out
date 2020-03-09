@@ -181,6 +181,13 @@ CREATE FOREIGN TABLE pxf_fdw_test_table_pxf_host ()
     OPTIONS ( resource '/foo', pxf_host 'foorbar.com' );
 ERROR:  the pxf_host option cannot be defined at the foreign table level
 --
+-- Table creation fails if pxf_protocol option is provided
+--
+CREATE FOREIGN TABLE pxf_fdw_test_table_pxf_protocol ()
+    SERVER pxf_fdw_test_server
+    OPTIONS ( resource '/foo', pxf_protocol 'httpS' );
+ERROR:  the pxf_protocol option cannot be defined at the foreign table level
+--
 -- Table creation succeeds if resource is provided and reject_limit is provided correctly
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_reject_limit (id int, name text)
@@ -352,3 +359,9 @@ ERROR:  the pxf_port option cannot be defined at the foreign table level
 ALTER FOREIGN TABLE pxf_fdw_test_table
     OPTIONS ( ADD pxf_host 'foobar.com' );
 ERROR:  the pxf_host option cannot be defined at the foreign table level
+--
+-- Table alteration fails if pxf_protocol option is provided
+--
+ALTER FOREIGN TABLE pxf_fdw_test_table
+    OPTIONS ( ADD pxf_protocol 'ANY-VALUE' );
+ERROR:  the pxf_protocol option cannot be defined at the foreign table level

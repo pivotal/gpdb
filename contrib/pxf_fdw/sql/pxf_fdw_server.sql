@@ -108,25 +108,32 @@ CREATE SERVER pxf_fdw_test_server
     OPTIONS ( log_errors 'true' );
 
 --
--- Server wrapper creation fails if negative pxf_port number is provided
+-- Server creation fails if negative pxf_port number is provided
 --
 CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( pxf_port '-1' );
 
 --
--- Server wrapper creation fails if out of range pxf_port number is provided
+-- Server creation fails if out of range pxf_port number is provided
 --
 CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( pxf_port '65536' );
 
 --
--- Server wrapper creation fails if non numeric pxf_port number is provided
+-- Server creation fails if non numeric pxf_port number is provided
 --
 CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( pxf_port 'foo' );
+
+--
+-- Server creation fails when an invalid pxf_protocol is provided
+--
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( pxf_protocol 'foo' );
 
 --
 -- Server creation succeeds if protocol option is not provided
@@ -154,6 +161,20 @@ CREATE SERVER pxf_fdw_test_server_with_port
 CREATE SERVER pxf_fdw_test_server_with_host
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( pxf_host 'foobar.com' );
+
+--
+-- Server creation succeeds when pxf_protocol is HTTP
+--
+CREATE SERVER pxf_fdw_test_server_unsecure
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( pxf_protocol 'HTTP' );
+
+--
+-- Server creation succeeds when pxf_protocol is https
+--
+CREATE SERVER pxf_fdw_test_server_secure
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( pxf_protocol 'Https' );
 
 --
 -- Server alteration fails if protocol option is added
@@ -322,3 +343,27 @@ ALTER SERVER pxf_fdw_test_server
 --
 ALTER SERVER pxf_fdw_test_server
     OPTIONS ( DROP pxf_host );
+
+--
+-- Server alteration fails when an invalid pxf_protocol value is provided
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( ADD pxf_protocol '12345' );
+
+--
+-- Server alteration succeeds when the pxf_protocol option is provided
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( ADD pxf_protocol 'hTTpS' );
+
+--
+-- Server alteration succeeds when pxf_protocol is set
+--
+ALTER SERVER pxf_fdw_test_server_secure
+    OPTIONS ( SET pxf_protocol 'http' );
+
+--
+-- Server alteration succeeds when pxf_protocol is dropped
+--
+ALTER SERVER pxf_fdw_test_server_secure
+    OPTIONS ( DROP pxf_protocol );

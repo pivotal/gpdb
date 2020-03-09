@@ -178,26 +178,48 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( protocol 'pxf_fdw_test', pxf_port 'foo' );
 ERROR:  unable to parse pxf_port number 'foo'
 --
--- Foreign-data wrapper succeeds when protocol is provided
+-- Foreign-data wrapper creation fails when an invalid pxf_protocol is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_protocol 'foo' );
+ERROR:  invalid pxf_protocol value 'foo'. valid pxf_protocol values are 'http' or 'https'
+--
+-- Foreign-data wrapper creation succeeds when protocol is provided
 --
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'pxf_fdw_test', mpp_execute 'all segments' );
 --
--- Foreign-data wrapper succeeds when valid pxf_port is provided
+-- Foreign-data wrapper creation succeeds when valid pxf_port is provided
 --
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_port
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'pxf_fdw_test', pxf_port '7007' );
 --
--- Foreign-data wrapper succeeds when pxf_host is provided
+-- Foreign-data wrapper creation succeeds when pxf_host is provided
 --
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_host
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'pxf_fdw_test', pxf_host 'foobar.com' );
+--
+-- Foreign-data wrapper creation succeeds when pxf_protocol is HTTP
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_unsecure
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_protocol 'HTTP' );
+--
+-- Foreign-data wrapper creation succeeds when pxf_protocol is https
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_secure
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', pxf_protocol 'https' );
 --
 -- Foreign-data wrapper alteration fails when protocol is dropped
 --
@@ -364,3 +386,24 @@ ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_host
 --
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_with_host
     OPTIONS ( DROP pxf_host );
+--
+-- Foreign-data wrapper alteration fails when an invalid pxf_protocol value is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_protocol '12345' );
+ERROR:  invalid pxf_protocol value '12345'. valid pxf_protocol values are 'http' or 'https'
+--
+-- Foreign-data wrapper alteration succeeds when the pxf_protocol option is provided
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD pxf_protocol 'hTTpS' );
+--
+-- Foreign-data wrapper alteration succeeds when pxf_protocol is set
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_secure
+    OPTIONS ( SET pxf_protocol 'http' );
+--
+-- Foreign-data wrapper alteration succeeds when pxf_protocol is dropped
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw_secure
+    OPTIONS ( DROP pxf_protocol );
