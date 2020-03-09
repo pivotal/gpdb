@@ -56,6 +56,18 @@
 #define FDW_OPTION_SSL_TRUSTED_CA_PATH "ssl_trusted_ca_path"
 #define FDW_OPTION_SSL_VERSION "ssl_version"
 
+#define FDW_OPTION_SSL_VERSION_DEFAULT "default"
+#define FDW_OPTION_SSL_VERSION_TLSv1 "TLSv1"
+#define FDW_OPTION_SSL_VERSION_SSLv2 "SSLv2"
+#define FDW_OPTION_SSL_VERSION_SSLv3 "SSLv3"
+#define FDW_OPTION_SSL_VERSION_TLSv1_0 "TLSv1.0"
+#define FDW_OPTION_SSL_VERSION_TLSv1_1 "TLSv1.1"
+#define FDW_OPTION_SSL_VERSION_TLSv1_2 "TLSv1.2"
+#define FDW_OPTION_SSL_VERSION_TLSv1_3 "TLSv1.3"
+
+/*
+ * Format Options
+ */
 #define FDW_COPY_OPTION_FORMAT "format"
 #define FDW_COPY_OPTION_HEADER "header"
 #define FDW_COPY_OPTION_DELIMITER "delimiter"
@@ -95,6 +107,26 @@ static const struct PxfFdwOption valid_options[] = {
 
 	/* Sentinel */
 	{NULL, InvalidOid}
+};
+
+struct PxfFdwSslVersionOption
+{
+	const char *optname;
+	int			version;		/* Value for the given version */
+};
+
+static const struct PxfFdwSslVersionOption valid_ssl_version_options[] = {
+	{FDW_OPTION_SSL_VERSION_DEFAULT, CURL_SSLVERSION_DEFAULT},
+	{FDW_OPTION_SSL_VERSION_TLSv1, CURL_SSLVERSION_TLSv1},
+	{FDW_OPTION_SSL_VERSION_SSLv2, CURL_SSLVERSION_SSLv2},
+	{FDW_OPTION_SSL_VERSION_SSLv3, CURL_SSLVERSION_SSLv3},
+	{FDW_OPTION_SSL_VERSION_TLSv1_0, CURL_SSLVERSION_TLSv1_0},
+	{FDW_OPTION_SSL_VERSION_TLSv1_1, CURL_SSLVERSION_TLSv1_1},
+	{FDW_OPTION_SSL_VERSION_TLSv1_2, CURL_SSLVERSION_TLSv1_2},
+	{FDW_OPTION_SSL_VERSION_TLSv1_3, CURL_SSLVERSION_TLSv1_3},
+
+	/* Sentinel */
+	{NULL, -1}
 };
 
 /*
@@ -604,10 +636,23 @@ PxfGetOptions(Oid foreigntableid)
 	{
 		if (!ssl_version)
 			opt->ssl_options->version = CURL_SSLVERSION_TLSv1;
-		// TODO: parse ssl_version string into one of CURL_SSLVERSION_DEFAULT,
-		//  CURL_SSLVERSION_TLSv1, CURL_SSLVERSION_SSLv2, CURL_SSLVERSION_SSLv3,
-		//  CURL_SSLVERSION_TLSv1_0, CURL_SSLVERSION_TLSv1_1,
-		//  CURL_SSLVERSION_TLSv1_2, CURL_SSLVERSION_TLSv1_3
+		else
+		{
+			const struct PxfFdwSslVersionOption *entry;
+			for (entry = valid_ssl_version_options; entry->optname; entry++)
+			{
+				if (!entry->optname)
+					ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						errmsg("invalid SSL version option %s. valid values are 'default', 'TLSv1', 'SSLv2', 'SSLv3', 'TLSv1.0', 'TLSv1.1', 'TLSv1.2', and 'TLSv1.3'",
+							ssl_version)));
+
+				if (pg_strcasecmp(entry->optname, ssl_version) == 0)
+				{
+					opt->ssl_options->version = entry->version;
+					break;
+				}
+			}
+		}
 	}
 
 	return opt;
