@@ -215,6 +215,7 @@ _PG_init(void)
 //			        errmsg("PostgreSQL version \"%s\" not supported by pxf_fdw",
 //			               GetConfigOptionByName("server_version", NULL)),
 //			        errhint("You'll have to update PostgreSQL to a later minor release.")));
+	DefineCustomIntVariable()
 }
 
 /*
