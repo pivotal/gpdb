@@ -1150,7 +1150,10 @@ BeginCopyTo(Relation forrel, List *options)
 	Assert(RelationIsForeign(forrel));
 
 #if (PG_VERSION_NUM <= 90500)
-	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
+//	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
+	ereport(ERROR,
+		(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				errmsg("BeginCopy is not defined yet: %m")));
 #else
 	cstate = BeginCopy(false, forrel, NULL, NULL, forrel->rd_id, NIL, options, NULL);
 #endif

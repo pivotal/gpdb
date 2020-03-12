@@ -119,7 +119,7 @@ typedef struct CopyStateData
 	int			file_encoding;	/* file or remote side's character encoding */
 	bool		need_transcoding;		/* file encoding diff from server? */
 	bool		encoding_embeds_ascii;	/* ASCII can be non-first byte? */
-	FmgrInfo   *enc_conversion_proc; /* conv proc from exttbl encoding to
+	FmgrInfo   *enc_conversion_proc; /* conv proc from exttbl encoding to 
 										server or the other way around */
 
 	/* parameters from the COPY command */
@@ -190,7 +190,7 @@ typedef struct CopyStateData
 
 	StringInfo	dispatch_msgbuf; /* used in COPY_DISPATCH mode, to construct message
 								  * to send to QE. */
-
+	
 	/* Error handling options */
 	CopyErrMode	errMode;
 	struct CdbSreh *cdbsreh; /* single row error handler */
@@ -238,6 +238,10 @@ typedef struct CopyStateData
 
 	/* Greenplum Database specific variables */
 	bool		escape_off;		/* treat backslashes as non-special? */
+	int			first_qe_processed_field;
+	List	   *qd_attnumlist;
+	List	   *qe_attnumlist;
+	bool		stopped_processing_at_delim;
 
 	PartitionNode *partitions; /* partitioning meta data from dispatcher */
 	List		  *ao_segnos;  /* AO table meta data from dispatcher */
@@ -286,9 +290,6 @@ extern CopyState BeginCopyFrom(Relation rel, const char *filename,
 			  bool is_program, copy_data_source_cb data_source_cb,
 			  void *data_source_cb_extra,
 			  List *attnamelist, List *options, List *ao_segnos);
-extern CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-						   const char *queryString, List *attnamelist, List *options,
-						   TupleDesc tupDesc);
 extern CopyState
 BeginCopyToOnSegment(QueryDesc *queryDesc);
 extern void EndCopyToOnSegment(CopyState cstate);
