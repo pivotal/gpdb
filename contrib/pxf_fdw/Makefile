@@ -8,7 +8,7 @@ SHLIB_LINK += -lcurl
 EXTENSION = pxf_fdw
 DATA = pxf_fdw--1.0.sql
 
-REGRESS = pxf_fdw_wrapper pxf_fdw_server pxf_fdw_user_mapping pxf_fdw_foreign_table
+REGRESS = pxf_fdw_core pxf_fdw_wrapper pxf_fdw_server pxf_fdw_user_mapping pxf_fdw_foreign_table
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

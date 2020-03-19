@@ -13,10 +13,10 @@ RETURNS void
 AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT;
 
-CREATE OR REPLACE FUNCTION pxf_fdw_version()
-RETURNS pg_catalog.int4 STRICT
+CREATE FUNCTION pxf_fdw_version()
+RETURNS pg_catalog.text STRICT
 AS 'MODULE_PATHNAME'
-LANGUAGE C STRICT;
+LANGUAGE C;
 
 CREATE FOREIGN DATA WRAPPER jdbc_pxf_fdw
     HANDLER pxf_fdw_handler
@@ -97,3 +97,6 @@ COMMENT ON FOREIGN DATA WRAPPER file_pxf_fdw
 
 COMMENT ON FOREIGN DATA WRAPPER demo_pxf_fdw
     IS 'PXF Demo foreign data wrapper. Quickly test PXF without configuring any external access';
+
+COMMENT ON FUNCTION pxf_fdw_version()
+    IS 'Displays the version of pxf_fdw';

@@ -16,7 +16,6 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
-#include "commands/defrem.h"
 #include "commands/explain.h"
 #include "commands/vacuum.h"
 #include "foreign/fdwapi.h"
@@ -28,6 +27,8 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 #include "parser/parsetree.h"
+#include "utils/builtins.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
@@ -35,12 +36,8 @@ PG_MODULE_MAGIC;
 
 #define DEFAULT_PXF_FDW_STARTUP_COST   50000
 
-/*
- * Similar to postgres version numbers where
- * version 9.4.24 is defined as 90424. PXF FDW
- * Version 1.0.0 is represented as 10000
- */
-#define PXF_FDW_VERSION_NUM   10000
+/* pxf_fdw version */
+#define PXF_FDW_VERSION_NUM   "1.0.0-DEVELOPMENT"
 
 typedef struct PxfFdwRelationInfo
 {
@@ -211,7 +208,7 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 Datum
 pxf_fdw_version(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_INT32(PXF_FDW_VERSION_NUM);
+	PG_RETURN_TEXT_P(cstring_to_text(PXF_FDW_VERSION_NUM));
 }
 
 /*
@@ -222,6 +219,10 @@ pxf_fdw_version(PG_FUNCTION_ARGS)
 void
 _PG_init(void)
 {
+	char *pgversion;
+
+	pgversion = GetConfigOptionByName("server_version", NULL);
+
 //	if ((pgver >= 90600 && pgver <= 90608)
 //		|| (pgver >= 100000 && pgver <= 100003))
 //		ereport(ERROR,
