@@ -167,6 +167,7 @@ PxfCurlHeadersInit(void)
 static char *
 BuildHeaderStr(const char *format, const char *key, const char *value)
 {
+	char	   *output = NULL;
 	char	   *header_option = NULL;
 
 	if (value == NULL)			/* the option is just a "key" */
@@ -176,7 +177,23 @@ BuildHeaderStr(const char *format, const char *key, const char *value)
 		StringInfoData formatter;
 
 		initStringInfo(&formatter);
-		appendStringInfo(&formatter, format, key, value);
+
+		/* Only encode custom headers */
+		if (pg_strncasecmp("X-GP-", key, 5) == 0)
+		{
+			output = curl_easy_escape(NULL, value, strlen(value));
+
+			if (!output)
+				elog(ERROR, "internal error: curl_easy_escape failed for value %s", value);
+
+			appendStringInfo(&formatter, format, key, output);
+			curl_free(output);
+		}
+		else
+		{
+			appendStringInfo(&formatter, format, key, value);
+		}
+
 		header_option = formatter.data;
 	}
 	return header_option;
