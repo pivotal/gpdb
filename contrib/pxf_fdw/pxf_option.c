@@ -80,11 +80,6 @@
 #define FDW_COPY_OPTION_FORCE_NOT_NULL "force_not_null"
 #define FDW_COPY_OPTION_FORCE_NULL "force_null"
 
-#define PXF_FDW_DEFAULT_PROTOCOL "http"
-#define PXF_FDW_DEFAULT_HOST     "localhost"
-#define PXF_FDW_DEFAULT_PORT     5888
-#define PXF_FDW_SECURE_PROTOCOL  "https"
-
 /*
  * Describes the valid copy options for objects that use this wrapper.
  */
@@ -300,8 +295,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 						errmsg("the %s option cannot be defined at the foreign table level",
 							FDW_OPTION_PXF_PROTOCOL)));
 
-			if (pg_strcasecmp(pxf_protocol, PXF_FDW_DEFAULT_PROTOCOL) != 0 &&
-				pg_strcasecmp(pxf_protocol, PXF_FDW_SECURE_PROTOCOL) != 0)
+			if (!IsValidPxfProtocolValue(&pxf_protocol, NULL, PGC_S_DEFAULT))
 				ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
 					errmsg("invalid pxf_protocol value '%s'. valid pxf_protocol values are 'http' or 'https'", pxf_protocol)));
 		}
@@ -624,13 +618,13 @@ PxfGetOptions(Oid foreigntableid)
 
 	/* Set defaults when not provided */
 	if (!opt->pxf_host)
-		opt->pxf_host = PXF_FDW_DEFAULT_HOST;
+		opt->pxf_host = pxf_host_guc_value;
 
 	if (!opt->pxf_port)
-		opt->pxf_port = PXF_FDW_DEFAULT_PORT;
+		opt->pxf_port = pxf_port_guc_value;
 
 	if (!opt->pxf_protocol)
-		opt->pxf_protocol = PXF_FDW_DEFAULT_PROTOCOL;
+		opt->pxf_protocol = pxf_protocol_guc_value;
 
 	if (pg_strcasecmp(opt->pxf_protocol, PXF_FDW_SECURE_PROTOCOL) == 0)
 	{
@@ -656,6 +650,13 @@ PxfGetOptions(Oid foreigntableid)
 	}
 
 	return opt;
+}
+
+bool
+IsValidPxfProtocolValue(char **newvalue, void **extra, GucSource source)
+{
+	return pg_strcasecmp(*newvalue, PXF_FDW_DEFAULT_PROTOCOL) == 0 ||
+		pg_strcasecmp(*newvalue, PXF_FDW_SECURE_PROTOCOL) == 0;
 }
 
 /*

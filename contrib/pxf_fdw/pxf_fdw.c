@@ -109,6 +109,10 @@ PG_FUNCTION_INFO_V1(pxf_fdw_handler);
 PG_FUNCTION_INFO_V1(pxf_fdw_validator);
 PG_FUNCTION_INFO_V1(pxf_fdw_version);
 
+char	*pxf_host_guc_value = PXF_FDW_DEFAULT_HOST;
+int		pxf_port_guc_value = PXF_FDW_DEFAULT_PORT;
+char	*pxf_protocol_guc_value = PXF_FDW_DEFAULT_PROTOCOL;
+
 /*
  * FDW functions declarations
  */
@@ -214,14 +218,20 @@ pxf_fdw_version(PG_FUNCTION_ARGS)
 /*
  * _PG_init
  * 		Library load-time initialization.
- * 		Sets PxfExitHook() callback for backend shutdown.
+ * 		Defines custom variables for pxf_host, pxf_port and pxf_protocol.
  */
 void
 _PG_init(void)
 {
-	char *pgversion;
+	/* diskquota.so must be in shared_preload_libraries to init SHM. */
+	if (!process_shared_preload_libraries_in_progress)
+		elog(ERROR, "It is too late to load diskquota.so :"
+		            " please put diskquota into 'shared_preload_libraries' in GUC");
 
-	pgversion = GetConfigOptionByName("server_version", NULL);
+
+//	char *pgversion;
+//
+//	pgversion = GetConfigOptionByName("server_version", NULL);
 
 //	if ((pgver >= 90600 && pgver <= 90608)
 //		|| (pgver >= 100000 && pgver <= 100003))
@@ -230,7 +240,42 @@ _PG_init(void)
 //			        errmsg("PostgreSQL version \"%s\" not supported by pxf_fdw",
 //			               GetConfigOptionByName("server_version", NULL)),
 //			        errhint("You'll have to update PostgreSQL to a later minor release.")));
-//	DefineCustomIntVariable()
+
+	/* get the configuration */
+	DefineCustomStringVariable("pxf_fdw.pxf_host",
+							"the hostname where the PXF Server process is running",
+							NULL,
+							&pxf_host_guc_value,
+							PXF_FDW_DEFAULT_HOST,
+							PGC_SIGHUP,
+							0,
+							NULL,
+							NULL,
+							NULL);
+
+	DefineCustomIntVariable("pxf_fdw.pxf_port",
+							"the port number where the PXF Server process is running",
+							NULL,
+							&pxf_port_guc_value,
+							PXF_FDW_DEFAULT_PORT,
+							0,
+							65535,
+							PGC_SIGHUP,
+							0,
+							NULL,
+							NULL,
+							NULL);
+
+	DefineCustomStringVariable("pxf_fdw.pxf_protocol",
+							"the transport protocol for the PXF Server (either 'http' or 'https')",
+							NULL,
+							&pxf_protocol_guc_value,
+							PXF_FDW_DEFAULT_PROTOCOL,
+							PGC_SIGHUP,
+							0,
+							IsValidPxfProtocolValue,
+							NULL,
+							NULL);
 }
 
 /*

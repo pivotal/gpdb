@@ -10,9 +10,19 @@
 
 #include "pxf_curl.h"
 #include "nodes/pg_list.h"
+#include "utils/guc.h"
 
 #ifndef _PXF_OPTION_H_
 #define _PXF_OPTION_H_
+
+#define PXF_FDW_DEFAULT_PROTOCOL "http"
+#define PXF_FDW_DEFAULT_HOST     "localhost"
+#define PXF_FDW_DEFAULT_PORT     5888
+#define PXF_FDW_SECURE_PROTOCOL  "https"
+
+extern char	   *pxf_host_guc_value;
+extern int		pxf_port_guc_value;
+extern char	   *pxf_protocol_guc_value;
 
 /*
  * Structure to store the PXF options
@@ -55,5 +65,6 @@ typedef struct PxfOptions
 
 /* Functions prototypes for pxf_option.c file */
 PxfOptions *PxfGetOptions(Oid foreigntableid);
+bool IsValidPxfProtocolValue(char **newvalue, void **extra, GucSource source);
 
 #endif							/* _PXF_OPTION_H_ */

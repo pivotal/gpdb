@@ -442,7 +442,7 @@ PxfCurlInit(const char *url, PXF_CURL_HEADERS headers, PxfSSLOptions *ssl_option
 		SetCurlOption(context, CURLOPT_SSL_VERIFYHOST, (const void *) (!ssl_options->disable_verification ? SSL_VERIFYHOST : SSL_NO_VERIFY));
 
 		/* set protocol */
-		SetCurlOption(context, CURLOPT_SSLVERSION, ssl_options->version);
+		SetCurlOption(context, CURLOPT_SSLVERSION, (const void *) &ssl_options->version);
 
 		/* disable session ID cache */
 		SetCurlOption(context, CURLOPT_SSL_SESSIONID_CACHE, 0);
