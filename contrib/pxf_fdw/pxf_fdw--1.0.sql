@@ -13,6 +13,11 @@ RETURNS void
 AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT;
 
+CREATE OR REPLACE FUNCTION pxf_fdw_version()
+RETURNS pg_catalog.int4 STRICT
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;
+
 CREATE FOREIGN DATA WRAPPER jdbc_pxf_fdw
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
@@ -64,7 +69,7 @@ CREATE FOREIGN DATA WRAPPER demo_pxf_fdw
     OPTIONS ( protocol 'demo', mpp_execute 'all segments' );
 
 COMMENT ON FOREIGN DATA WRAPPER jdbc_pxf_fdw
-IS 'PXF JDBC foreign data wrapper';
+    IS 'PXF JDBC foreign data wrapper';
 
 COMMENT ON FOREIGN DATA WRAPPER hdfs_pxf_fdw
     IS 'PXF HDFS foreign data wrapper';

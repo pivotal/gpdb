@@ -35,6 +35,13 @@ PG_MODULE_MAGIC;
 
 #define DEFAULT_PXF_FDW_STARTUP_COST   50000
 
+/*
+ * Similar to postgres version numbers where
+ * version 9.4.24 is defined as 90424. PXF FDW
+ * Version 1.0.0 is represented as 10000
+ */
+#define PXF_FDW_VERSION_NUM   10000
+
 typedef struct PxfFdwRelationInfo
 {
 	/* baserestrictinfo clauses, broken down into safe and unsafe subsets. */
@@ -103,6 +110,7 @@ extern PGDLLEXPORT void _PG_init(void);
  */
 PG_FUNCTION_INFO_V1(pxf_fdw_handler);
 PG_FUNCTION_INFO_V1(pxf_fdw_validator);
+PG_FUNCTION_INFO_V1(pxf_fdw_version);
 
 /*
  * FDW functions declarations
@@ -200,6 +208,12 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(fdw_routine);
 }
 
+Datum
+pxf_fdw_version(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_INT32(PXF_FDW_VERSION_NUM);
+}
+
 /*
  * _PG_init
  * 		Library load-time initialization.
@@ -215,7 +229,7 @@ _PG_init(void)
 //			        errmsg("PostgreSQL version \"%s\" not supported by pxf_fdw",
 //			               GetConfigOptionByName("server_version", NULL)),
 //			        errhint("You'll have to update PostgreSQL to a later minor release.")));
-	DefineCustomIntVariable()
+//	DefineCustomIntVariable()
 }
 
 /*
