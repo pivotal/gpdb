@@ -243,6 +243,16 @@ _PG_init(void)
 //			               GetConfigOptionByName("server_version", NULL)),
 //			        errhint("You'll have to update PostgreSQL to a later minor release.")));
 
+
+	/*
+	 * Since pxf_fdw brings multiple FDWs (hdfs_pxf_fdw, s3_pxf_fdw,
+	 * jdbc_pxf_fdw, etc.), we define GUCs as an alternative to having to
+	 * ALTER FOREIGN DATA WRAPPER demo_pxf_fdw OPTIONS ( ADD pxf_port '8080')
+	 * for example. Users would need to ALTER all pxf_fdws. GUCs are an
+	 * alternative that will work across all pxf_fdws. Individual pxf_fdws can
+	 * still override these values by issuing ALTER commands.
+	 */
+
 	/* get the configuration */
 	DefineCustomStringVariable("pxf_fdw.pxf_host",
 							"the hostname where the PXF Server process is running",

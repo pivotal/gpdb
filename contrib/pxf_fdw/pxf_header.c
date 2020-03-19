@@ -75,6 +75,8 @@ BuildHttpHeaders(PXF_CURL_HEADERS headers,
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("user identity is unknown")));
+
+	PxfCurlHeadersAppend(headers, "X-GP-ENCODED-HEADER-VALUES", "true");
 	PxfCurlHeadersAppend(headers, "X-GP-USER", ev.GP_USER);
 
 	PxfCurlHeadersAppend(headers, "X-GP-SEGMENT-ID", ev.GP_SEGMENT_ID);

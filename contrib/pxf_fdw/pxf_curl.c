@@ -991,17 +991,11 @@ CheckResponseStatus(curl_context *context)
 			continue;
 		if (CURLE_OK != (status = msg->data.result))
 		{
-			char	   *addr = GetDestAddress(msg->easy_handle);
 			StringInfoData err;
-
 			initStringInfo(&err);
-
 			appendStringInfo(&err, "transfer error (%ld): %s",
 							 status, curl_easy_strerror(status));
 
-			if (strlen(addr) != 0)
-				appendStringInfo(&err, " from %s", addr);
-			pfree(addr);
 			elog(ERROR, "%s", err.data);
 		}
 		elog(DEBUG2, "CheckResponseStatus: msg %d done with status OK", i++);
@@ -1034,7 +1028,6 @@ CheckResponseCode(curl_context *context)
 	{
 		StringInfoData err;
 		char	   *http_error_msg;
-		char	   *addr;
 
 		initStringInfo(&err);
 
@@ -1047,13 +1040,6 @@ CheckResponseCode(curl_context *context)
 
 		/* add remote http error code */
 		appendStringInfo(&err, "remote component error (%ld)", response_code);
-
-		addr = GetDestAddress(context->curl_handle);
-		if (strlen(addr) != 0)
-		{
-			appendStringInfo(&err, " from %s", addr);
-		}
-		pfree(addr);
 
 		if (!HandleSpecialError(response_code, &err))
 		{
@@ -1079,7 +1065,6 @@ CheckResponseCode(curl_context *context)
 		}
 
 		elog(ERROR, "%s", err.data);
-
 	}
 
 	FreeHttpResponse(context);
