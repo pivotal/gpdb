@@ -224,11 +224,11 @@ void
 _PG_init(void)
 {
 	/* pxf_fdw.so must be in shared_preload_libraries for guc integration. */
-	if (!process_shared_preload_libraries_in_progress)
+	if (!process_shared_preload_libraries_in_progress && Gp_role == GP_ROLE_DISPATCH)
 		ereport(NOTICE,
-				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
-				errmsg("It is too late to load pxf_fdw.so. Add pxf_fdw into 'shared_preload_libraries' for additional functionality from pxf_fdw."),
-				errhint("gpconfig -c shared_preload_libraries -v 'pxf_fdw' and restart Greenplum")));
+			(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
+			errmsg("It is too late to load pxf_fdw.so. Add pxf_fdw into 'shared_preload_libraries' for additional functionality from pxf_fdw."),
+			errhint("gpconfig -c shared_preload_libraries -v 'pxf_fdw' and restart Greenplum")));
 
 
 //	char *pgversion;
