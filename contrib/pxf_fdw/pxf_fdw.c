@@ -223,10 +223,12 @@ pxf_fdw_version(PG_FUNCTION_ARGS)
 void
 _PG_init(void)
 {
-	/* diskquota.so must be in shared_preload_libraries to init SHM. */
+	/* pxf_fdw.so must be in shared_preload_libraries for guc integration. */
 	if (!process_shared_preload_libraries_in_progress)
-		elog(ERROR, "It is too late to load diskquota.so :"
-		            " please put diskquota into 'shared_preload_libraries' in GUC");
+		ereport(NOTICE,
+				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
+				errmsg("It is too late to load pxf_fdw.so. Add pxf_fdw into 'shared_preload_libraries' for additional functionality from pxf_fdw."),
+				errhint("gpconfig -c shared_preload_libraries -v 'pxf_fdw' and restart Greenplum")));
 
 
 //	char *pgversion;
