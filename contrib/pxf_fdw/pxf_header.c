@@ -91,11 +91,14 @@ BuildHttpHeaders(PXF_CURL_HEADERS headers,
 	/* headers for uri data */
 	PxfCurlHeadersAppend(headers, "X-GP-URL-HOST", options->pxf_host);
 	PxfCurlHeadersAppend(headers, "X-GP-URL-PORT", pxfPortString);
+	PxfCurlHeadersAppend(headers, "X-GP-URL-PROTOCOL", options->pxf_protocol);
 
-	PxfCurlHeadersAppend(headers, "X-GP-OPTIONS-PROFILE", options->profile);
-	PxfCurlHeadersAppend(headers, "X-GP-FORMAT", options->wire_format);
-	PxfCurlHeadersAppend(headers, "X-GP-DATA-DIR", options->resource);
-	PxfCurlHeadersAppend(headers, "X-GP-OPTIONS-SERVER", options->server);
+	PxfCurlHeadersAppend(headers, "X-GP-WIRE-FORMAT", options->wire_format);
+	PxfCurlHeadersAppend(headers, "X-GP-RESOURCE", options->resource);
+	PxfCurlHeadersAppend(headers, "X-GP-SERVER", options->server);
+
+	PxfCurlHeadersAppend(headers, "X-GP-PROTOCOL", options->protocol);
+	PxfCurlHeadersAppend(headers, "X-GP-FORMAT", options->format);
 
 	/* extra options */
 	AddOptionsToHttpHeader(headers, options->options);

@@ -19,6 +19,8 @@
 
 #include "pxf_curl.h"
 #include "miscadmin.h"
+#include "utils/builtins.h"
+#include "utils/fmgroids.h"
 #include "utils/guc.h"
 
 /* include libcurl without typecheck.
@@ -123,7 +125,7 @@ static void	FreeHttpResponse(curl_context *context);
 static void	CompactInternalBuffer(curl_buffer *buffer);
 static void	ReallocInternalBuffer(curl_buffer *buffer, size_t required);
 static bool	HandleSpecialError(long response, StringInfo err);
-static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer);
+static void	GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **parsed_error_message, char **parsed_hint);
 static char	*BuildHeaderStr(const char *format, const char *key, const char *value);
 static bool	FileExistsAndCanRead(char *filename);
 
@@ -1028,6 +1030,7 @@ CheckResponseCode(curl_context *context)
 	{
 		StringInfoData err;
 		char	   *http_error_msg;
+		char	   *http_error_hint = NULL;
 
 		initStringInfo(&err);
 
@@ -1039,7 +1042,7 @@ CheckResponseCode(curl_context *context)
 		}
 
 		/* add remote http error code */
-		appendStringInfo(&err, "remote component error (%ld)", response_code);
+		appendStringInfo(&err, "PXF server error (%ld)", response_code);
 
 		if (!HandleSpecialError(response_code, &err))
 		{
@@ -1048,23 +1051,22 @@ CheckResponseCode(curl_context *context)
 			 * response_text could be NULL in some cases. GetHttpErrorMsg
 			 * checks for that.
 			 */
-			http_error_msg = GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer);
+			GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer, &http_error_msg, &http_error_hint);
 
-			/*
-			 * check for a specific confusing error, and replace with a
-			 * clearer one
-			 */
-			if (strstr(http_error_msg, "instance does not contain any root resource classes") != NULL)
-			{
-				appendStringInfo(&err, " : PXF not correctly installed in CLASSPATH");
-			}
-			else
-			{
-				appendStringInfo(&err, ": %s", http_error_msg);
-			}
+			appendStringInfo(&err, ": %s", http_error_msg);
 		}
 
-		elog(ERROR, "%s", err.data);
+		if (NULL != http_error_hint)
+		{
+			ereport(ERROR,
+				(errcode(ERRCODE_FDW_ERROR),
+				errmsg("%s", err.data),
+				errhint("%s", http_error_hint)));
+		}
+		else
+		{
+			ereport(ERROR, (errcode(ERRCODE_FDW_ERROR), errmsg("%s", err.data)));
+		}
 	}
 
 	FreeHttpResponse(context);
@@ -1076,39 +1078,29 @@ CheckResponseCode(curl_context *context)
  * The first condition that matches, defines the final message string and ends the function.
  * The layout of the HTTP response message is:
 
- <html>
- <head>
- <meta meta_data_attributes />
- <title> title_content_which_has_a_brief_description_of_the_error </title>
- </head>
- <body>
- <h2> heading_containing_the_error_code </h2>
- <p>
- main_body_paragraph_with_a_detailed_description_of_the_error_on_the_rest_server_side
- <pre> the_error_in_original_format_not_HTML_ususally_the_title_of_the_java_exception</pre>
- </p>
- <h3>Caused by:</h3>
- <pre>
- the_full_java_exception_with_the_stack_output
- </pre>
- <hr /><i><small>Powered by Jetty://</small></i>
- <br/>
- <br/>
- </body>
- </html>
+ {
+  "timestamp": "the server timestamp",
+  "status": status code int,
+  "error": "error description",
+  "message": "error message",
+  "trace": "the stack trace for the error",
+  "path": "uri for the request"
+ }
 
- * Our first priority is to get the paragraph <p> inside <body>, and in case we don't find it, then we try to get
- * the <title>.
+ * We try to get the message and trace.
  */
-static char *
-GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
+static void
+GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **parsed_error_message, char **parsed_hint)
 {
-	char	   *start,
-			   *end,
-			   *ret;
+	char	   *fmessagestr = "message";
+	char	   *ftracestr = "trace";
+	Datum	    result;
 	StringInfoData errMsg;
+	FmgrInfo *json_object_field_text_fn;
 
 	initStringInfo(&errMsg);
+	*parsed_error_message = NULL;
+	*parsed_hint = NULL;
 
 	/*
 	 * 1. The server not listening on the port specified in the <create
@@ -1119,11 +1111,10 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
 	if (http_ret_code == 0)
 	{
 		if (curl_error_buffer == NULL)
-			return "There is no pxf servlet listening on the host and port specified in the external table url";
+			*parsed_error_message = "There is no PXF server listening on the host and port specified in the PXF configuration";
 		else
-		{
-			return curl_error_buffer;
-		}
+			*parsed_error_message = curl_error_buffer;
+		return;
 	}
 
 	/*
@@ -1133,92 +1124,51 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
 	 * issue in the Rest server or our curl client. In this case we again
 	 * issue our own message.
 	 */
-	if (!msg || (msg && strlen(msg) == 0))
+	if (!msg || strlen(msg) == 0)
 	{
 		appendStringInfo(&errMsg, "HTTP status code is %ld but HTTP response string is empty", http_ret_code);
-		ret = pstrdup(errMsg.data);
+		*parsed_error_message = pstrdup(errMsg.data);
 		pfree(errMsg.data);
-		return ret;
+		return;
 	}
 
 	/*
-	 * 3. The "normal" case - There is an HTTP response and the response has a
-	 * <body> section inside where there is a paragraph contained by the <p>
-	 * tag.
+	 * 3. The "normal" case - There is an HTTP response and we parse the
+	 * json response fields "message" and "trace"
 	 */
-	start = strstr(msg, "<body>");
-	if (start != NULL)
+
+	json_object_field_text_fn = palloc(sizeof(FmgrInfo));
+
+	/* find the json_object_field_text function */
+	fmgr_info(F_JSON_OBJECT_FIELD_TEXT, json_object_field_text_fn);
+
+	/* get the "trace" field from the json error */
+	result = FunctionCall2(json_object_field_text_fn,
+		PointerGetDatum(cstring_to_text(msg)),
+		PointerGetDatum(cstring_to_text(ftracestr)));
+
+	if (DatumGetPointer(result) != NULL)
+		*parsed_hint = text_to_cstring(DatumGetTextP(result));
+
+	/* get the "message" field from the json error */
+	result = FunctionCall2(json_object_field_text_fn,
+		PointerGetDatum(cstring_to_text(msg)),
+		PointerGetDatum(cstring_to_text(fmessagestr)));
+
+	pfree(json_object_field_text_fn);
+
+	if (DatumGetPointer(result) != NULL)
 	{
-		start = strstr(start, "<p>");
-		if (start != NULL)
-		{
-			char	   *tmp;
-			bool		skip = false;
-
-			start += 3;
-			end = strstr(start, "</p>");	/* assuming where is a <p>, there
-											 * is a </p> */
-			if (end != NULL)
-			{
-				/* Take one more line after the </p> */
-				tmp = strchr(end, '\n');
-				if (tmp != NULL)
-					end = tmp;
-
-				tmp = start;
-
-				/*
-				 * Right now we have the full paragraph inside the <body>. We
-				 * need to extract from it the <pre> tags, the '\n' and the
-				 * '\r'.
-				 */
-				while (tmp != end)
-				{
-					if (*tmp == '>')	/* skipping the <pre> tags */
-						skip = false;
-					else if (*tmp == '<')	/* skipping the <pre> tags */
-					{
-						skip = true;
-						appendStringInfoChar(&errMsg, ' ');
-					}
-					else if (*tmp != '\n' && *tmp != '\r' && skip == false)
-						appendStringInfoChar(&errMsg, *tmp);
-					tmp++;
-				}
-
-				ret = pstrdup(errMsg.data);
-				pfree(errMsg.data);
-				return ret;
-			}
-		}
+		*parsed_error_message = text_to_cstring(DatumGetTextP(result));
+		return;
 	}
 
 	/*
-	 * 4. We did not find the <body>. So we try to print the <title>.
+	 * 4. This is an unexpected situation. We received an error message from
+	 * the server but it does not have a "message" field. In this case we
+	 * return the error message we received as-is.
 	 */
-	start = strstr(msg, "<title>");
-	if (start != NULL)
-	{
-		start += 7;
-
-		/*
-		 * no need to check if end is null, if <title> exists then also
-		 * </title> exists
-		 */
-		end = strstr(start, "</title>");
-		if (end != NULL)
-		{
-			ret = pnstrdup(start, end - start);
-			return ret;
-		}
-	}
-
-	/*
-	 * 5. This is an unexpected situation. We received an error message from
-	 * the server but it does not have neither a <body> nor a <title>. In this
-	 * case we return the error message we received as-is.
-	 */
-	return msg;
+	*parsed_error_message = msg;
 }
 
 static void

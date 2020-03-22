@@ -587,12 +587,6 @@ PxfGetOptions(Oid foreigntableid)
 		}
 	}							/* foreach */
 
-	/* The profile corresponds to protocol[:format] */
-	opt->profile = opt->protocol;
-
-	if (opt->format)
-		opt->profile = psprintf("%s:%s", opt->protocol, opt->format);
-
 	opt->wire_format = "TEXT";
 
 	if (opt->format && pg_strcasecmp(opt->format, FDW_OPTION_WIRE_FORMAT_TEXT) == 0)
