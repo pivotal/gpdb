@@ -41,7 +41,7 @@ CREATE FOREIGN DATA WRAPPER hbase_pxf_fdw
 CREATE FOREIGN DATA WRAPPER s3_pxf_fdw
     HANDLER pxf_fdw_handler
     VALIDATOR pxf_fdw_validator
-    OPTIONS ( protocol 's3a', mpp_execute 'all segments' );
+    OPTIONS ( protocol 's3', mpp_execute 'all segments' );
 
 CREATE FOREIGN DATA WRAPPER gs_pxf_fdw
     HANDLER pxf_fdw_handler

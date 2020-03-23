@@ -125,7 +125,7 @@ static void	FreeHttpResponse(curl_context *context);
 static void	CompactInternalBuffer(curl_buffer *buffer);
 static void	ReallocInternalBuffer(curl_buffer *buffer, size_t required);
 static bool	HandleSpecialError(long response, StringInfo err);
-static void	GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **parsed_error_message, char **parsed_hint);
+static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer);
 static char	*BuildHeaderStr(const char *format, const char *key, const char *value);
 static bool	FileExistsAndCanRead(char *filename);
 
@@ -1030,7 +1030,6 @@ CheckResponseCode(curl_context *context)
 	{
 		StringInfoData err;
 		char	   *http_error_msg;
-		char	   *http_error_hint = NULL;
 
 		initStringInfo(&err);
 
@@ -1051,22 +1050,15 @@ CheckResponseCode(curl_context *context)
 			 * response_text could be NULL in some cases. GetHttpErrorMsg
 			 * checks for that.
 			 */
-			GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer, &http_error_msg, &http_error_hint);
+			http_error_msg = GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer);
 
 			appendStringInfo(&err, ": %s", http_error_msg);
 		}
 
-		if (NULL != http_error_hint)
-		{
-			ereport(ERROR,
-				(errcode(ERRCODE_FDW_ERROR),
-				errmsg("%s", err.data),
-				errhint("%s", http_error_hint)));
-		}
-		else
-		{
-			ereport(ERROR, (errcode(ERRCODE_FDW_ERROR), errmsg("%s", err.data)));
-		}
+		ereport(ERROR,
+			(errcode(ERRCODE_FDW_ERROR),
+			errmsg("%s", err.data),
+			errhint("Check the PXF logs located in the '$PXF_CONF/logs' directory for additional details")));
 	}
 
 	FreeHttpResponse(context);
@@ -1089,18 +1081,16 @@ CheckResponseCode(curl_context *context)
 
  * We try to get the message and trace.
  */
-static void
-GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **parsed_error_message, char **parsed_hint)
+static char*
+GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
 {
-	char	   *fmessagestr = "message";
-	char	   *ftracestr = "trace";
+	char	   *res,
+			   *fmessagestr = "message";
 	Datum	    result;
 	StringInfoData errMsg;
 	FmgrInfo *json_object_field_text_fn;
 
 	initStringInfo(&errMsg);
-	*parsed_error_message = NULL;
-	*parsed_hint = NULL;
 
 	/*
 	 * 1. The server not listening on the port specified in the <create
@@ -1111,10 +1101,9 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **p
 	if (http_ret_code == 0)
 	{
 		if (curl_error_buffer == NULL)
-			*parsed_error_message = "There is no PXF server listening on the host and port specified in the PXF configuration";
+			return "There is no PXF server listening on the host and port specified in the PXF configuration";
 		else
-			*parsed_error_message = curl_error_buffer;
-		return;
+			return curl_error_buffer;
 	}
 
 	/*
@@ -1127,9 +1116,9 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **p
 	if (!msg || strlen(msg) == 0)
 	{
 		appendStringInfo(&errMsg, "HTTP status code is %ld but HTTP response string is empty", http_ret_code);
-		*parsed_error_message = pstrdup(errMsg.data);
+		res = pstrdup(errMsg.data);
 		pfree(errMsg.data);
-		return;
+		return res;
 	}
 
 	/*
@@ -1142,14 +1131,6 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **p
 	/* find the json_object_field_text function */
 	fmgr_info(F_JSON_OBJECT_FIELD_TEXT, json_object_field_text_fn);
 
-	/* get the "trace" field from the json error */
-	result = FunctionCall2(json_object_field_text_fn,
-		PointerGetDatum(cstring_to_text(msg)),
-		PointerGetDatum(cstring_to_text(ftracestr)));
-
-	if (DatumGetPointer(result) != NULL)
-		*parsed_hint = text_to_cstring(DatumGetTextP(result));
-
 	/* get the "message" field from the json error */
 	result = FunctionCall2(json_object_field_text_fn,
 		PointerGetDatum(cstring_to_text(msg)),
@@ -1159,8 +1140,7 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **p
 
 	if (DatumGetPointer(result) != NULL)
 	{
-		*parsed_error_message = text_to_cstring(DatumGetTextP(result));
-		return;
+		return text_to_cstring(DatumGetTextP(result));
 	}
 
 	/*
@@ -1168,7 +1148,7 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **p
 	 * the server but it does not have a "message" field. In this case we
 	 * return the error message we received as-is.
 	 */
-	*parsed_error_message = msg;
+	return msg;
 }
 
 static void
