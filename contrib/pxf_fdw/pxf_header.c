@@ -33,7 +33,6 @@ static void AddAlignmentSizeHttpHeader(PXF_CURL_HEADERS headers);
 static void AddTupleDescriptionToHttpHeader(PXF_CURL_HEADERS headers, Relation rel);
 static void AddOptionsToHttpHeader(PXF_CURL_HEADERS headers, List *options);
 static void AddProjectionDescHttpHeader(PXF_CURL_HEADERS headers, List *retrieved_attrs);
-static void AddProjectionIndexHeader(PXF_CURL_HEADERS headers, int attno, char *long_number);
 static char *NormalizeKeyName(const char *key);
 static char *TypeOidGetTypename(Oid typid);
 
@@ -293,7 +292,7 @@ AddProjectionDescHttpHeader(PXF_CURL_HEADERS headers, List *retrieved_attrs)
 		int			attno = lfirst_int(lc1);
 
 		/* zero-based index in the server side */
-		AddProjectionIndexHeader(headers, attno - 1, long_number);
+		PxfCurlHeadersAppend(headers, psprintf("X-GP-ATTRS-PROJ-IDX-%d", (attno - 1)), "true");
 	}
 
 	if (retrieved_attrs->length == 0)
@@ -302,18 +301,6 @@ AddProjectionDescHttpHeader(PXF_CURL_HEADERS headers, List *retrieved_attrs)
 	/* Convert the number of projection columns to a string */
 	pg_ltoa(retrieved_attrs->length, long_number);
 	PxfCurlHeadersAppend(headers, "X-GP-ATTRS-PROJ", long_number);
-}
-
-/*
- * Adds the projection index header for the given attno
- */
-static void
-AddProjectionIndexHeader(PXF_CURL_HEADERS headers,
-						 int attno,
-						 char *long_number)
-{
-	pg_ltoa(attno, long_number);
-	PxfCurlHeadersAppend(headers, "X-GP-ATTRS-PROJ-IDX", long_number);
 }
 
 /*
