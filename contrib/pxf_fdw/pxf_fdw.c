@@ -228,21 +228,7 @@ _PG_init(void)
 		ereport(NOTICE,
 			(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
 			errmsg("It is too late to load pxf_fdw.so. Add pxf_fdw into 'shared_preload_libraries' for additional functionality from pxf_fdw."),
-			errhint("gpconfig -c shared_preload_libraries -v 'pxf_fdw' and restart Greenplum")));
-
-
-//	char *pgversion;
-//
-//	pgversion = GetConfigOptionByName("server_version", NULL);
-
-//	if ((pgver >= 90600 && pgver <= 90608)
-//		|| (pgver >= 100000 && pgver <= 100003))
-//		ereport(ERROR,
-//		        (errcode(ERRCODE_EXTERNAL_ROUTINE_INVOCATION_EXCEPTION),
-//			        errmsg("PostgreSQL version \"%s\" not supported by pxf_fdw",
-//			               GetConfigOptionByName("server_version", NULL)),
-//			        errhint("You'll have to update PostgreSQL to a later minor release.")));
-
+			errhint("gpconfig -c shared_preload_libraries -v 'pxf_fdw' and reload Greenplum configuration")));
 
 	/*
 	 * Since pxf_fdw brings multiple FDWs (hdfs_pxf_fdw, s3_pxf_fdw,
@@ -1259,6 +1245,8 @@ PxfAbortCallback(ResourceReleasePhase phase,
 {
 	if (isCommit || phase != RESOURCE_RELEASE_AFTER_LOCKS)
 		return;
+
+	elog(INFO, "pxf_fdw: PxfAbortCallback called on segment: %d", PXF_SEGMENT_ID);
 
 	pxfEndForeignScan(arg);
 }
