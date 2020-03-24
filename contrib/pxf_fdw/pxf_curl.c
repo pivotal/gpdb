@@ -125,7 +125,7 @@ static void	FreeHttpResponse(curl_context *context);
 static void	CompactInternalBuffer(curl_buffer *buffer);
 static void	ReallocInternalBuffer(curl_buffer *buffer, size_t required);
 static bool	HandleSpecialError(long response, StringInfo err);
-static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer);
+static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **trace_message);
 static char	*BuildHeaderStr(const char *format, const char *key, const char *value);
 static bool	FileExistsAndCanRead(char *filename);
 
@@ -1029,7 +1029,8 @@ CheckResponseCode(curl_context *context)
 	else if (response_code != 200 && response_code != 100)
 	{
 		StringInfoData err;
-		char	   *http_error_msg;
+		char	   *http_error_msg,
+				   *trace_msg = NULL;
 
 		initStringInfo(&err);
 
@@ -1050,15 +1051,25 @@ CheckResponseCode(curl_context *context)
 			 * response_text could be NULL in some cases. GetHttpErrorMsg
 			 * checks for that.
 			 */
-			http_error_msg = GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer);
+			http_error_msg = GetHttpErrorMsg(response_code, response_text, context->curl_error_buffer, &trace_msg);
 
 			appendStringInfo(&err, ": %s", http_error_msg);
 		}
 
-		ereport(ERROR,
-			(errcode(ERRCODE_FDW_ERROR),
-			errmsg("%s", err.data),
-			errhint("Check the PXF logs located in the '$PXF_CONF/logs' directory for additional details")));
+		if (trace_msg != NULL)
+		{
+			ereport(ERROR,
+				(errcode(ERRCODE_FDW_ERROR),
+				errmsg("%s", err.data),
+				errhint("%s", trace_msg)));
+		}
+		else
+		{
+			ereport(ERROR,
+				(errcode(ERRCODE_FDW_ERROR),
+				errmsg("%s", err.data),
+				errhint("Check the PXF logs located in the '$PXF_CONF/logs' directory or 'set client_min_messages=DEBUG1' for additional details")));
+		}
 	}
 
 	FreeHttpResponse(context);
@@ -1082,15 +1093,17 @@ CheckResponseCode(curl_context *context)
  * We try to get the message and trace.
  */
 static char*
-GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
+GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **trace_message)
 {
 	char	   *res,
-			   *fmessagestr = "message";
+			   *fmessagestr = "message",
+			   *ftracestr = "trace";
 	Datum	    result;
 	StringInfoData errMsg;
 	FmgrInfo *json_object_field_text_fn;
 
 	initStringInfo(&errMsg);
+	*trace_message = NULL;
 
 	/*
 	 * 1. The server not listening on the port specified in the <create
@@ -1130,6 +1143,17 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer)
 
 	/* find the json_object_field_text function */
 	fmgr_info(F_JSON_OBJECT_FIELD_TEXT, json_object_field_text_fn);
+
+	if ((DEBUG1 >= log_min_messages) || (DEBUG1 >= client_min_messages))
+	{
+		/* get the "trace" field from the json error */
+		result = FunctionCall2(json_object_field_text_fn,
+			PointerGetDatum(cstring_to_text(msg)),
+			PointerGetDatum(cstring_to_text(ftracestr)));
+
+		if (DatumGetPointer(result) != NULL)
+			*trace_message = text_to_cstring(DatumGetTextP(result));
+	}
 
 	/* get the "message" field from the json error */
 	result = FunctionCall2(json_object_field_text_fn,

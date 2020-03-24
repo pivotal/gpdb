@@ -208,7 +208,6 @@ AddTupleDescriptionToHttpHeader(PXF_CURL_HEADERS headers, Relation rel)
 						pg_ltoa(2, long_number);
 						PxfCurlHeadersAppend(headers, formatter.data, long_number);
 
-
 						/* precision */
 						resetStringInfo(&formatter);
 						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
