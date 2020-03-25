@@ -305,7 +305,7 @@ pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 	 * Identify which baserestrictinfo clauses can be sent to the remote
 	 * server and which can't.
 	 */
-	classifyConditions(root, baserel, baserel->baserestrictinfo,
+	PxfClassifyConditions(root, baserel, baserel->baserestrictinfo,
 					   &fpinfo->remote_conds, &fpinfo->local_conds);
 
 	/*
@@ -317,14 +317,23 @@ pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 #else
 	pull_varattnos((Node *) baserel->reltarget->exprs, baserel->relid, &fpinfo->attrs_used);
 #endif
-	foreach(lc, fpinfo->local_conds)
+
+	/* TODO: do we need to add attributes for local conditions? add test */
+	/*foreach(lc, fpinfo->local_conds)
+	{
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+		pull_varattnos((Node *) rinfo->clause, baserel->relid, &fpinfo->attrs_used);
+	}*/
+
+	foreach(lc, fpinfo->remote_conds)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 
 		pull_varattnos((Node *) rinfo->clause, baserel->relid, &fpinfo->attrs_used);
 	}
 
-	deparseTargetList(rel, fpinfo->attrs_used, &fpinfo->retrieved_attrs);
+	PxfDeparseTargetList(rel, fpinfo->attrs_used, &fpinfo->retrieved_attrs);
 
 	heap_close(rel, NoLock);
 
@@ -449,17 +458,20 @@ pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
 	elog(DEBUG5, "pxf_fdw: pxfExplainForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
-	List *fdw_private;
-	char *filter_str;
-	List *retrieved_attrs;
-	int retrieved_attrs_length, counter;
+	List	   *fdw_private;
+	char	    *filter_str;
+	char	   *colname;
+	List	   *retrieved_attrs;
+	int			retrieved_attrs_length, counter;
+	TupleDesc	tupdesc;
 
 	if (es->verbose)
 	{
-		fdw_private            = ((ForeignScan *) node->ss.ps.plan)->fdw_private;
-		filter_str             = strVal(list_nth(fdw_private, FdwScanPrivateWhereClauses));
-		retrieved_attrs        = (List *) list_nth(fdw_private, FdwScanPrivateRetrievedAttrs);
-		retrieved_attrs_length = list_length(retrieved_attrs);
+		fdw_private			    = ((ForeignScan *) node->ss.ps.plan)->fdw_private;
+		filter_str			    = strVal(list_nth(fdw_private, FdwScanPrivateWhereClauses));
+		retrieved_attrs		    = (List *) list_nth(fdw_private, FdwScanPrivateRetrievedAttrs);
+		retrieved_attrs_length	= list_length(retrieved_attrs);
+		tupdesc					= RelationGetDescr(node->ss.ss_currentRelation);
 
 		if (filter_str)
 		{
@@ -475,13 +487,14 @@ pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 			foreach_with_count(lc1, retrieved_attrs, counter)
 			{
 				int attno = lfirst_int(lc1);
-				appendStringInfo(&columnProjection, "%d", attno);
+				colname = NameStr(tupdesc->attrs[attno - 1]->attname);
+				appendStringInfo(&columnProjection, "%s", colname);
 				if (counter < retrieved_attrs_length - 1) {
 					appendStringInfo(&columnProjection, ", ");
 				}
 			}
 
-			ExplainPropertyText("Column projection attributes", columnProjection.data, es);
+			ExplainPropertyText("Column projection", columnProjection.data, es);
 			resetStringInfo(&columnProjection);
 		}
 	}
@@ -788,9 +801,8 @@ pxfEndForeignModify(EState *estate,
 static int
 pxfIsForeignRelUpdatable(Relation rel)
 {
-	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable starts on segment: %d", PXF_SEGMENT_ID);
-	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable ends on segment: %d", PXF_SEGMENT_ID);
-	/* Only INSERT is allowed at the moment */
+	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable called on segment: %d", PXF_SEGMENT_ID);
+	/* Only INSERTs are allowed at the moment */
 	return 1u << (unsigned int) CMD_INSERT | 0u << (unsigned int) CMD_UPDATE | 0u << (unsigned int) CMD_DELETE;
 }
 
@@ -1246,7 +1258,7 @@ PxfAbortCallback(ResourceReleasePhase phase,
 	if (isCommit || phase != RESOURCE_RELEASE_AFTER_LOCKS)
 		return;
 
-	elog(INFO, "pxf_fdw: PxfAbortCallback called on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG1, "pxf_fdw: PxfAbortCallback called on segment: %d", PXF_SEGMENT_ID);
 
 	pxfEndForeignScan(arg);
 }

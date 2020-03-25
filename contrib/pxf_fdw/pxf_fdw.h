@@ -21,7 +21,7 @@
 #define PXF_SEGMENT_COUNT        getgpsegmentCount()
 
 /* in pxf_deparse.c */
-extern void deparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs);
-extern void classifyConditions(PlannerInfo *root, RelOptInfo *baserel, List *input_conds, List **remote_conds, List **local_conds);
+extern void PxfDeparseTargetList(Relation rel, Bitmapset *attrs_used, List **retrieved_attrs);
+extern void PxfClassifyConditions(PlannerInfo *root, RelOptInfo *baserel, List *input_conds, List **remote_conds, List **local_conds);
 
 #endif							/* _PXF_FDW_H_ */
