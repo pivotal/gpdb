@@ -22,6 +22,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/jsonapi.h"
 
 /* include libcurl without typecheck.
  * This allows wrapping curl_easy_setopt to be wrapped
@@ -91,6 +92,13 @@ typedef struct churl_settings
 	struct curl_slist *headers;
 } churl_settings;
 
+/* the null action object used for pure validation */
+static JsonSemAction nullSemAction =
+{
+	NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, NULL
+};
+
 #define SSL_NO_VERIFY	0L
 #define SSL_VERIFYPEER	1L
 #define SSL_VERIFYHOST	2L
@@ -128,6 +136,7 @@ static bool	HandleSpecialError(long response, StringInfo err);
 static char	*GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **trace_message);
 static char	*BuildHeaderStr(const char *format, const char *key, const char *value);
 static bool	FileExistsAndCanRead(char *filename);
+static bool	IsValidJson(text *json);
 
 /*
  * Debug function - print the http headers
@@ -1098,7 +1107,8 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **t
 	char	   *res,
 			   *fmessagestr = "message",
 			   *ftracestr = "trace";
-	Datum	    result;
+	text	   *error_text;
+	Datum		result;
 	StringInfoData errMsg;
 	FmgrInfo *json_object_field_text_fn;
 
@@ -1134,11 +1144,20 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **t
 		return res;
 	}
 
+	error_text = cstring_to_text(msg);
+
 	/*
-	 * 3. The "normal" case - There is an HTTP response and we parse the
+	 * 3. First make sure we have a valid JSON so we can extract the fields we
+	 * need for the error message. If we don't have a valid JSON just return
+	 * the raw error text.
+	 */
+	if (!IsValidJson(error_text))
+		return msg;
+
+	/*
+	 * 4. The "normal" case - There is an HTTP response and we parse the
 	 * json response fields "message" and "trace"
 	 */
-
 	json_object_field_text_fn = palloc(sizeof(FmgrInfo));
 
 	/* find the json_object_field_text function */
@@ -1148,7 +1167,7 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **t
 	{
 		/* get the "trace" field from the json error */
 		result = FunctionCall2(json_object_field_text_fn,
-			PointerGetDatum(cstring_to_text(msg)),
+			PointerGetDatum(error_text),
 			PointerGetDatum(cstring_to_text(ftracestr)));
 
 		if (DatumGetPointer(result) != NULL)
@@ -1157,22 +1176,43 @@ GetHttpErrorMsg(long http_ret_code, char *msg, char *curl_error_buffer, char **t
 
 	/* get the "message" field from the json error */
 	result = FunctionCall2(json_object_field_text_fn,
-		PointerGetDatum(cstring_to_text(msg)),
+		PointerGetDatum(error_text),
 		PointerGetDatum(cstring_to_text(fmessagestr)));
 
 	pfree(json_object_field_text_fn);
 
 	if (DatumGetPointer(result) != NULL)
-	{
 		return text_to_cstring(DatumGetTextP(result));
-	}
 
 	/*
-	 * 4. This is an unexpected situation. We received an error message from
+	 * 5. This is an unexpected situation. We received an error message from
 	 * the server but it does not have a "message" field. In this case we
 	 * return the error message we received as-is.
 	 */
 	return msg;
+}
+
+static bool
+IsValidJson(text *json)
+{
+	MemoryContext oldcontext    = CurrentMemoryContext;
+	bool          is_valid_json = true;
+	JsonLexContext *lex;
+
+	PG_TRY();
+	{
+		/* validate it */
+		lex = makeJsonLexContext(json, false);
+		pg_parse_json(lex, &nullSemAction);
+	}
+	PG_CATCH();
+	{
+		is_valid_json = false;
+		MemoryContextSwitchTo(oldcontext);
+	}
+	PG_END_TRY();
+
+	return is_valid_json;
 }
 
 static void

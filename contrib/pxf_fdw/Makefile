@@ -6,7 +6,7 @@ OBJS = pxf_fdw.o pxf_deparse.o pxf_filter.o pxf_header.o pxf_option.o pxf_contro
 SHLIB_LINK += -lcurl
 
 EXTENSION = pxf_fdw
-DATA = pxf_fdw--1.0.sql
+DATA = pxf_fdw--1.0.0.sql
 
 REGRESS = pxf_fdw_core pxf_fdw_wrapper pxf_fdw_server pxf_fdw_user_mapping pxf_fdw_foreign_table
 
