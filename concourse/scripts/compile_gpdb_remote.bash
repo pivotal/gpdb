@@ -46,24 +46,10 @@ EOF
     export IVYREPO_PASSWD="$IVYREPO_PASSWD"
 EOF
     scp -P $REMOTE_PORT env.sh $REMOTE_USER@$REMOTE_HOST:$GPDB_DIR/env.sh
-
-    # Get git information from local repo(concourse gpdb_src input)
-    cd gpdb_src
-    GIT_URI=`git config --get remote.origin.url`
-    GIT_COMMIT=`git rev-parse HEAD`
-    cd ..
 }
 
-# Since we're cloning in a different machine, maybe there's 
-# new commit pushed to the same repo. We need to reset to the
-# same commit to current concourse build.
-function remote_clone() {
-    ssh -A -T -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST <<- EOF
-    cd $GPDB_DIR
-    git clone --recursive $GIT_URI gpdb_src
-    cd gpdb_src
-    git reset --hard $GIT_COMMIT
-EOF
+function copy_to_remote() {
+    scp -P $REMOTE_PORT -r gpdb_src $REMOTE_USER@$REMOTE_HOST:$GPDB_DIR/
     scp -P $REMOTE_PORT -r gpaddon_src $REMOTE_USER@$REMOTE_HOST:$GPDB_DIR/
 }
 
@@ -101,7 +87,7 @@ function _main() {
 
     time setup_ssh_keys
     time remote_setup
-    time remote_clone
+    time copy_to_remote
     time remote_compile
     time download
     time cleanup
