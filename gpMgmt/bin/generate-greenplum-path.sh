@@ -3,8 +3,9 @@
 cat <<"EOF"
 #!/usr/bin/env bash
 GPHOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-
-PYTHONHOME="${GPHOME}/ext/python"
+if [ -x $GPHOME/ext/python/bin/python ]; then
+    export PYTHONHOME="$GPHOME/ext/python"
+fi
 PYTHONPATH="${GPHOME}/lib/python"
 PATH="${GPHOME}/bin:${PYTHONHOME}/bin:${PATH}"
 LD_LIBRARY_PATH="${GPHOME}/lib:${PYTHONHOME}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -15,7 +16,6 @@ fi
 
 export GPHOME
 export PATH
-export PYTHONHOME
 export PYTHONPATH
 export LD_LIBRARY_PATH
 export OPENSSL_CONF
