@@ -338,7 +338,7 @@ sol10_sparc_32_GPDB_BUILDSET=partial
 win64_GPDB_BUILDSET=partial
 win32_GPDB_BUILDSET=partial
 BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
-perl_archlibexp=`perl -MConfig -e 'print $Config{archlibexp}'`
+perl_archlibexp=$(perl -MConfig -e 'print $Config{archlibexp}')
 
 # set default build steps
 define BUILD_STEPS
