@@ -212,7 +212,6 @@ function _main() {
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl
-  exit 1
 }
 
 _main "$@"
