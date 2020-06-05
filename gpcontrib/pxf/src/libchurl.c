@@ -1039,6 +1039,7 @@ get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer, char 
 
 	if (http_ret_code == 0)
 	{
+		*hint_message = "Use the 'pxf [cluster] start' command to start the PXF service.";
 		if (curl_error_buffer == NULL)
 			return "There is no pxf servlet listening on the host and port specified in the external table url";
 		else
