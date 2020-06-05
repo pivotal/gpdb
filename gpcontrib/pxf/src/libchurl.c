@@ -910,8 +910,12 @@ check_response_code(churl_context *context)
 			response_text = context->download_buffer->ptr + context->download_buffer->bot;
 		}
 
-		/* add remote http error code */
-		appendStringInfo(&err, "PXF server error(%ld)", response_code);
+		appendStringInfo(&err, "PXF server error", response_code);
+		if ((DEBUG1 >= log_min_messages) || (DEBUG1 >= client_min_messages))
+		{
+			/* add remote http error code */
+			appendStringInfo(&err, "(%ld)", response_code);
+		}
 
 		if (!handle_special_error(response_code, &err))
 		{
@@ -922,7 +926,7 @@ check_response_code(churl_context *context)
 			 */
 			http_error_msg = get_http_error_msg(response_code, response_text, context->curl_error_buffer, &hint_msg, &trace_msg);
 
-			appendStringInfo(&err, ": %s", http_error_msg);
+			appendStringInfo(&err, " : %s", http_error_msg);
 		}
 
 		if (trace_msg != NULL || hint_msg != NULL)
