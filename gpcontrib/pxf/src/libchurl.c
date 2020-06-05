@@ -910,7 +910,7 @@ check_response_code(churl_context *context)
 			response_text = context->download_buffer->ptr + context->download_buffer->bot;
 		}
 
-		appendStringInfo(&err, "PXF server error", response_code);
+		appendStringInfo(&err, "PXF server error");
 		if ((DEBUG1 >= log_min_messages) || (DEBUG1 >= client_min_messages))
 		{
 			/* add remote http error code */
