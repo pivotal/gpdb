@@ -1181,8 +1181,17 @@ get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer, char 
 	pfree(json_object_field_text_fn);
 
 	if (DatumGetPointer(result) != NULL)
-		return text_to_cstring(DatumGetTextP(result));
+	{
+		char* parsed_message = text_to_cstring(DatumGetTextP(result));
 
+		end = strstr(parsed_message, "\n");
+		if (end != NULL)
+		{
+			ret = pnstrdup(parsed_message, end - parsed_message);
+			return ret;
+		}
+		return parsed_message;
+	}
 
 	/*
 	 * 5. This is an unexpected situation. We received an error message from
