@@ -592,16 +592,16 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
 			appendStringInfo(buf, "  (%s)", whoami);
 		}
 
+		if (hnt)
+		{
+			oneTrailingNewline(buf);
+			appendStringInfo(buf, "HINT:  %s", hnt);
+		}
+
 		if (dtl)
 		{
 			oneTrailingNewline(buf);
 			appendStringInfo(buf, "%s", dtl);
-		}
-
-		if (hnt)
-		{
-			oneTrailingNewline(buf);
-			appendStringInfo(buf, "%s", hnt);
 		}
 
 		if (ctx)
