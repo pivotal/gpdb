@@ -2,7 +2,7 @@
 
 cat <<"EOF"
 #!/usr/bin/env bash
-GPHOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+GPHOME="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" >/dev/null 2>&1 && pwd)"
 
 EOF
 
