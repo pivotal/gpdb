@@ -6,6 +6,7 @@
 
 # Set to zero to force cluster to be created without data checksums
 DATACHECKSUMS=1
+ENCODING=${ENCODING:-UNICODE}
 
 # ======================================================================
 # Data Directories
@@ -300,7 +301,7 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	
 	CHECK_POINT_SEGMENTS=8
 	
-	ENCODING=UNICODE
+	ENCODING=${ENCODING}
 EOF
 
 if [ "${DATACHECKSUMS}" == "0" ]; then
