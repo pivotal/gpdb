@@ -615,7 +615,7 @@ resources:
   type: git
   icon: git
   source:
-    branch: master
+    branch: main
     uri: https://github.com/greenplum-db/greenplum-database-release.git
 
 {% endif %}
