@@ -86,6 +86,11 @@ function install_deps_for_photon() {
   rpm -i libquicklz-devel-installer/libquicklz-*.rpm
 }
 
+function install_deps_for_photon() {
+  rpm -i libquicklz-installer/libquicklz-*.rpm
+  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+}
+
 function install_deps_for_ubuntu() {
   dpkg --install libquicklz-installer/libquicklz-*.deb
 }

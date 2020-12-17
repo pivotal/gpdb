@@ -93,7 +93,11 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
+<<<<<<< HEAD
 SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 rhel8_x86_64 linux_x86_64 photon3_x86_64
+=======
+SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 linux_x86_64 photon3_x86_64
+>>>>>>> efb3f65647... Compile server on Photon3
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -167,7 +171,11 @@ CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LI
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
+<<<<<<< HEAD
 ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64 rhel8_x86_64 ubuntu18.04_x86_64 sles12_x86_64 photon3_x86_64)" ""
+=======
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64 ubuntu18.04_x86_64 sles12_x86_64 photon3_x86_64)" ""
+>>>>>>> efb3f65647... Compile server on Photon3
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX

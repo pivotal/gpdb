@@ -709,7 +709,7 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/photon3/python-(2\.7\.12\+.*).tar.gz
-{% endif %}
+{% endif %}  
 {% if "ubuntu18.04" in os_types %}
 - name: python-ubuntu18.04
   type: gcs
@@ -766,6 +766,14 @@ resources:
 - name: gpdb6-photon3-build
   type: registry-image
   source:
+    repository: pivotaldata/gpdb6-photon3-build
+    tag: latest
+{% endif %}
+{% endif %}
+{% if "photon3" in os_types %}
+- name: gpdb6-photon3-build
+  type: registry-image
+  source: 
     repository: pivotaldata/gpdb6-photon3-build
     tag: latest
 {% endif %}
@@ -1059,6 +1067,30 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz
 
+{% endif %}
+{% if "photon3" in os_types %}
+- name: bin_gpdb_photon3
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_photon3/bin_gpdb.tar.gz
+
+- name: bin_gpdb_clients_photon3
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz
+
+{% if pipeline_configuration == "prod" %}
+- name: server-build-photon3
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/gpdb6/server-build-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
+{% endif %}
 {% endif %}
 {% if "win" in os_types %}
 - name: terraform_windows
