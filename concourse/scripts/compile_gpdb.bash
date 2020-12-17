@@ -45,6 +45,15 @@ function prep_env() {
       ;;
     esac
     ;;
+  photon)
+    case "${TARGET_OS_VERSION}" in
+    3) export BLD_ARCH=photon3_x86_64; export LANG=en_US.UTF-8;;
+    *)
+      echo "TARGET_OS_VERSION not set or recognized for Photon"
+      exit 1
+      ;;
+    esac
+    ;;
   esac
 }
 
@@ -53,7 +62,7 @@ function install_libuv() {
   local libdir
 
   case "${TARGET_OS}" in
-    centos | sles) libdir=/usr/lib64 ;;
+    centos | sles | photon) libdir=/usr/lib64 ;;
     ubuntu) libdir=/usr/lib/x86_64-linux-gnu ;;
     *) return ;;
   esac
@@ -70,6 +79,11 @@ function install_deps_for_centos_or_sles() {
   tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
 
+function install_deps_for_photon() {
+  rpm -i libquicklz-installer/libquicklz-*.rpm
+  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+}
+
 function install_deps_for_ubuntu() {
   dpkg --install libquicklz-installer/libquicklz-*.deb
 }
@@ -78,6 +92,7 @@ function install_deps() {
   case "${TARGET_OS}" in
     centos | sles) install_deps_for_centos_or_sles;;
     ubuntu) install_deps_for_ubuntu;;
+    photon) install_deps_for_photon;;
   esac
   install_libuv
 }
@@ -140,7 +155,7 @@ function unittest_check_gpdb() {
 function include_zstd() {
   local libdir
   case "${TARGET_OS}" in
-    centos | sles) libdir=/usr/lib64 ;;
+    centos | sles | photon) libdir=/usr/lib64 ;;
     ubuntu) libdir=/usr/lib ;;
     *) return ;;
   esac
@@ -154,7 +169,7 @@ function include_zstd() {
 function include_quicklz() {
   local libdir
   case "${TARGET_OS}" in
-    centos | sles) libdir=/usr/lib64 ;;
+    centos | sles | photon) libdir=/usr/lib64 ;;
     ubuntu) libdir=/usr/local/lib ;;
     *) return ;;
   esac
@@ -184,7 +199,7 @@ function include_libuv() {
   local includedir=/usr/include
   local libdir
   case "${TARGET_OS}" in
-    centos | sles) libdir=/usr/lib64 ;;
+    centos | sles | photon) libdir=/usr/lib64 ;;
     ubuntu) libdir=/usr/lib/x86_64-linux-gnu ;;
     *) return ;;
   esac
@@ -271,7 +286,7 @@ function _main() {
   mkdir gpdb_src/gpAux/ext
 
   case "${TARGET_OS}" in
-    centos|ubuntu|sles)
+    centos|ubuntu|sles|photon)
       prep_env
       build_xerces
       test_orca
@@ -282,7 +297,7 @@ function _main() {
         export BLD_ARCH=win32
         ;;
     *)
-        echo "only centos, ubuntu, sles and win32 are supported TARGET_OS'es"
+        echo "only centos, ubuntu, sles, photon and win32 are supported TARGET_OS'es"
         false
         ;;
   esac
