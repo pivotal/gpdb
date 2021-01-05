@@ -38,6 +38,9 @@ su - gpadmin
 pip install --user psutil
 cat >> ~/.bash_profile <<EOF
 export PS1='\n\w\n$ '
+if [ -f /opt/gcc_env.sh ]; then
+    source /opt/gcc_env.sh
+fi
 source /opt/gcc_env.sh
 export CC=\`which gcc\`
 export CXX=\`which g++\`

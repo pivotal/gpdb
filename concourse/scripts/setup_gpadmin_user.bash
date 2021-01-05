@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Based on install_hawq_toolchain.bash in Pivotal-DataFabric/ci-infrastructure repo
+CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source "${CWDIR}/common.bash"
 
 set -euxo pipefail
 setup_ssh_for_user() {
@@ -92,7 +94,7 @@ setup_sshd() {
 
 
   case "$TEST_OS" in
-    centos6 | sles*)
+    centos* | sles*)
       test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
       ;;
     photon*)
@@ -100,7 +102,6 @@ setup_sshd() {
       test -e /etc/ssh/ssh_host_ed25519_key || ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N '' -t ed25519
       ;;
     centos7)
-      test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
       # For Centos 7, disable looking for host key types that older Centos versions don't support.
       sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
       sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
@@ -120,27 +121,6 @@ setup_sshd() {
   ssh_keyscan_for_user gpadmin
 }
 
-
-determine_os() {
-  local name version
-  if [ -f /etc/redhat-release ]; then
-    name="centos"
-    version=$(sed </etc/redhat-release 's/.*release *//' | cut -f1 -d.)
-  elif [ -f /etc/SuSE-release ]; then
-    name="sles"
-    version=$(awk -F " *= *" '$1 == "VERSION" { print $2 }' /etc/SuSE-release)
-  elif  grep -q photon /etc/os-release  ; then
-    name="photon"
-    version=$( awk -F " *= *" '$1 == "VERSION_ID" { print $2 }' /etc/os-release | cut -f1 -d.)
-  elif grep -q ubuntu /etc/os-release ; then
-    name="ubuntu"
-    version=$(awk -F " *= *" '$1 == "VERSION_ID" { print $2 }' /etc/os-release | tr -d \")
-  else
-    echo "Could not determine operating system type" >/dev/stderr
-    exit 1
-  fi
-  echo "${name}${version}"
-}
 
 # Set the "Set-User-ID" bit of ping, or else gpinitsystem will error by following message:
 # [FATAL]:-Unknown host d6f9f630-65a3-4c98-4c03-401fbe5dd60b: ping: socket: Operation not permitted

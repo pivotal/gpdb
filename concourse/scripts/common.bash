@@ -9,6 +9,27 @@ function set_env() {
     export TIMEFORMAT=$'\e[4;33mIt took %R seconds to complete this step\e[0m';
 }
 
+function determine_os() {
+  local name version
+  if [ -f /etc/redhat-release ]; then
+    name="centos"
+    version=$(sed </etc/redhat-release 's/.*release *//' | cut -f1 -d.)
+  elif [ -f /etc/SuSE-release ]; then
+    name="sles"
+    version=$(awk -F " *= *" '$1 == "VERSION" { print $2 }' /etc/SuSE-release)
+  elif  grep -q photon /etc/os-release  ; then
+    name="photon"
+    version=$( awk -F " *= *" '$1 == "VERSION_ID" { print $2 }' /etc/os-release | cut -f1 -d.)
+  elif grep -q ubuntu /etc/os-release ; then
+    name="ubuntu"
+    version=$(awk -F " *= *" '$1 == "VERSION_ID" { print $2 }' /etc/os-release | tr -d \")
+  else
+    echo "Could not determine operating system type" >/dev/stderr
+    exit 1
+  fi
+  echo "${name}${version}"
+}
+
 ## ----------------------------------------------------------------------
 ## Test functions
 ## ----------------------------------------------------------------------
@@ -99,6 +120,11 @@ function install_python_hacks() {
             echo 'WARNING: This is a known issue on SLES11.'
             set -x
         fi
+    elif which tdnf > /dev/null; then
+            set +x
+            echo 'WARNING: could not install patchelf; virtualenv may fail later'
+            echo 'WARNING: patchelf is not available on Photon.'
+            set -x
     elif which yum > /dev/null; then
         yum install -y patchelf
     elif which apt > /dev/null; then

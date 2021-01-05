@@ -8,7 +8,9 @@ function gen_env(){
 	cat > ~/run_unit_tests.sh <<-EOF
 	set -exo pipefail
 
-	source /opt/gcc_env.sh
+    if [ -f /opt/gcc_env.sh ]; then
+        source /opt/gcc_env.sh
+    fi
 	cd "\${1}/gpdb_src/gpcontrib/gpcloud"
 	make test
 	EOF

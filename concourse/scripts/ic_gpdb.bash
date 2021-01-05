@@ -57,7 +57,7 @@ function _main() {
     fi
 
     case "${TEST_OS}" in
-    centos|ubuntu|sles) ;; #Valid
+    centos|ubuntu|sles|photon) ;; #Valid
     *)
       echo "FATAL: TEST_OS is set to an invalid value: $TEST_OS"
       echo "Configure TEST_OS to be centos, or ubuntu"

@@ -244,18 +244,28 @@ groups:
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
 {% endif %}
+{% if "photon3" in os_types %}
+  - icw_gporca_photon3
+  - icw_planner_photon3
+  - icw_gporca_icproxy_photon3
+  - icw_planner_icproxy_photon3
+{% endif %}
   - gate_icw_end
 {% endif %}
 {% if "Interconnect" in test_sections %}
   ## --------------------------------------------------------------------
+{% if "centos6" in test_sections %}
   - interconnect
+{% endif %}
+{% if "photon3" in test_sections %}
+  - interconnect_photon3
+{% endif %}
 {% endif %}
 {% if "ResourceGroups" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_resource_groups_start
-  - resource_group_centos6
-{% if "centos7" in os_types %}
-  - resource_group_centos7
+{% if "photon3" in os_types %}
+  - resource_group_photon3
 {% endif %}
 {% endif %}
 {% if "Gpperfmon" in test_sections %}
@@ -269,17 +279,38 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-  - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
+{% if "centos6" in os_types %}
   - [[ test.name ]]
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
   - [[ test.name ]]_ubuntu18
+{% endif %}
+{% if "photon3" in os_types %}
+  - [[ test.name ]]_photon3
+{% endif %}
 {% endfor %}
+{% if "centos6" in os_types %}
   - check_centos
+  - cli_cross_subnet
+{% endif %}
+{% if "photon3" in os_types %}
+  - check_photon
+  - cli_cross_subnet_photon3
+{% endif %}
+{% if "centos6" in os_types and "ICW" in test_sections %}
+  - gpexpand
+  - pg_upgrade
+{% endif %}
+{% if "photon3" in os_types and "ICW" in test_sections %}
+  - gpexpand_photon3
+  - pg_upgrade_photon3
+{% endif %}
 {% endif %}
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
-{% if "centos6" in os_types or "centos7" in os_types%}
+{% if "centos6" in os_types or "centos7" in os_types or "photon3" in os_types %}
   - madlib_build_gppkg
 {% endif %}
 {% if "centos6" in os_types %}
@@ -295,6 +326,9 @@ groups:
 {% if "Extensions" in test_sections %}
 {% if "centos6" in os_types %}
   - icw_extensions_gpcloud_centos6
+{% endif %}
+{% if "photon3" in os_types %}
+  - icw_extensions_gpcloud_photon3
 {% endif %}
 {% endif %}
 
@@ -374,6 +408,12 @@ groups:
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
 {% endif %}
+{% if "photon3" in os_types %}
+  - icw_gporca_photon3
+  - icw_planner_photon3
+  - icw_gporca_icproxy_photon3
+  - icw_planner_icproxy_photon3
+{% endif %}
   - gate_icw_end
 
 {% endif %}
@@ -387,15 +427,22 @@ groups:
   - icw_extensions_gpcloud_centos6
 {% endif %}
 
+{% if "photon3" in os_types %}
+  - icw_extensions_gpcloud_photon3
+{% endif %}
+
 {% endif %}
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
-
-{% if "centos6" in os_types %}
 - name: Interconnect
   jobs:
+{% if "centos6" in os_types %}
   - compile_gpdb_centos6
   - interconnect
+{% endif %}
+{% if "photon3" in os_types %}
+  - compile_gpdb_photon3
+  - interconnect_photon3
 {% endif %}
 
 {% endif %}
@@ -405,11 +452,9 @@ groups:
 - name: ResourceGroups
   jobs:
   - gate_resource_groups_start
-  - resource_group_centos6
-  - compile_gpdb_centos6
-{% if "centos7" in os_types %}
-  - resource_group_centos7
-  - compile_gpdb_centos7
+{% if "photon3" in os_types %}
+  - resource_group_photon3
+  - compile_gpdb_photon3
 {% endif %}
 
 {% endif %}
@@ -433,17 +478,35 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-  - compile_gpdb_ubuntu18.04
-  - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
+{% if "centos6" in os_types %}
   - [[ test.name ]]
+  - cli_cross_subnet
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
   - [[ test.name ]]_ubuntu18
+  - compile_gpdb_ubuntu18.04
+{% endif %}
+{% if "photon3" in os_types %}
+  - [[ test.name ]]_photon3
+  - cli_cross_subnet_photon3
+{% endif %}
 {% endfor %}
+{% if "centos6" in os_types %}
   - check_centos
   - compile_gpdb_centos6
+{% endif %}
+{% if "photon3" in os_types %}
+  - check_photon
+  - compile_gpdb_photon3
+{% endif %}
 {% if "centos6" in os_types and "ICW" in test_sections %}
   - gpexpand
   - pg_upgrade
+{% endif %}
+{% if "photon3" in os_types and "ICW" in test_sections %}
+  - gpexpand_photon3
+  - pg_upgrade_photon3
 {% endif %}
 
 {% endif %}
@@ -452,7 +515,7 @@ groups:
 - name: AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
-{% if "centos6" in os_types or "centos7" in os_types%}
+{% if "centos6" in os_types or "centos7" in os_types or "photon3" in os_types %}
   - madlib_build_gppkg
 {% endif %}
 {% if "centos6" in os_types %}
@@ -497,6 +560,10 @@ resource_types:
 ## ======================================================================
 
 resources:
+- name: clang_toolchain
+  type: registry-image
+  source:
+    repository: gcr.io/data-orca/clang-toolchain
 {% if "ResourceGroups" in test_sections or "CLI" in test_sections %}
 - name: ccp_src
   type: git
@@ -521,7 +588,6 @@ resources:
   source:
     repository: alpine
     tag: latest
-
 - name: ccp-image
   type: registry-image
   source:
@@ -537,6 +603,15 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/icw_planner_centos6_dump/dump.sql.xz
+
+{% endif %}
+{% if "photon3" in os_types and "ICW" in test_sections %}
+- name: icw_planner_photon3_dump
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/icw_planner_photon3_dump/dump.sql.xz
 
 {% endif %}
 - name: gpdb_src
@@ -765,16 +840,13 @@ resources:
 {% if "photon3" in os_types %}
 - name: gpdb6-photon3-build
   type: registry-image
-  source:
-    repository: pivotaldata/gpdb6-photon3-build
-    tag: latest
-{% endif %}
-{% endif %}
-{% if "photon3" in os_types %}
-- name: gpdb6-photon3-build
-  type: registry-image
   source: 
     repository: pivotaldata/gpdb6-photon3-build
+    tag: latest
+- name: gpdb6-photon3-test
+  type: registry-image
+  source: 
+    repository: pivotaldata/gpdb6-photon3-test
     tag: latest
 {% endif %}
 
@@ -1067,30 +1139,6 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz
 
-{% endif %}
-{% if "photon3" in os_types %}
-- name: bin_gpdb_photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_photon3/bin_gpdb.tar.gz
-
-- name: bin_gpdb_clients_photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz
-
-{% if pipeline_configuration == "prod" %}
-- name: server-build-photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-build-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
-{% endif %}
 {% endif %}
 {% if "win" in os_types %}
 - name: terraform_windows
@@ -1819,6 +1867,100 @@ jobs:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: ((configure_flags))
+{% endif %}
+
+{% if "photon3" in os_types %}
+- name: icw_gporca_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_photon3]
+      - get: bin_gpdb
+        resource: bin_gpdb_photon3
+        passed: [compile_gpdb_photon3]
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
+  - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-photon3]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-photon3-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      TEST_OS: photon
+      CONFIGURE_FLAGS: ((configure_flags))
+
+- name: icw_planner_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_photon3]
+      - get: bin_gpdb
+        passed: [compile_gpdb_photon3]
+        resource: bin_gpdb_photon3
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
+  - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-photon3]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-photon3-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      TEST_OS: photon
+      CONFIGURE_FLAGS: ((configure_flags))
+      DUMP_DB: "true"
+  - put: icw_planner_photon3_dump
+    params:
+      file: sqldump/dump.sql.xz
+
+- name: icw_gporca_icproxy_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_photon3]
+      - get: bin_gpdb
+        resource: bin_gpdb_photon3
+        passed: [compile_gpdb_photon3]
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
+  - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-photon3]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-photon3-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
+      TEST_OS: photon
+      CONFIGURE_FLAGS: ((configure_flags))
+
+- name: icw_planner_icproxy_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_photon3]
+      - get: bin_gpdb
+        passed: [compile_gpdb_photon3]
+        resource: bin_gpdb_photon3
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
+  - task: ic_gpdb
+    {% if pipeline_configuration == "prod" %}
+    tags: [icw-photon3]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-photon3-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
+      TEST_OS: photon
+      CONFIGURE_FLAGS: ((configure_flags))
 
 {% endif %}
 {% if "oracle7" in os_types %}
@@ -2100,7 +2242,26 @@ jobs:
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
       TEST_OS: centos
 {% endif %}
-
+{% if "photon3" in os_types %}
+- name: interconnect_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_photon3]
+      - get: bin_gpdb
+        passed: [compile_gpdb_photon3]
+        resource: bin_gpdb_photon3
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-photon3-test
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+        BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
+      TEST_OS: photon
+{% endif %}
 {% endif %}
 {% if "ResourceGroups" in test_sections %}
 ## ======================================================================
@@ -2117,108 +2278,50 @@ jobs:
   - in_parallel:
       steps:
       - get: gpdb_src
+{% if "photon3" in os_types %}
+      - get: bin_gpdb_photon3
         passed:
-        - compile_gpdb_centos6
-{% if "centos7" in os_types %}
-        - compile_gpdb_centos7
-{% endif %}
-        trigger: true
-      - get: bin_gpdb_centos6
-        passed:
-        - compile_gpdb_centos6
-{% if "centos7" in os_types %}
-      - get: bin_gpdb_centos7
-        passed:
-        - compile_gpdb_centos7
-{% endif %}
-{% if "centos6" in os_types or "centos7" in os_types %}
-      - get: binary_swap_gpdb
-        passed: [prepare_binary_swap_gpdb_centos6]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
+        - compile_gpdb_photon3
 {% endif %}
 
-- name: resource_group_centos6
+{% if "photon3" in os_types %}
+- name: resource_group_photon3
   plan:
   - in_parallel:
       steps:
       - get: gpdb_src
         passed: [gate_resource_groups_start]
       - get: gpdb_binary
-        resource: bin_gpdb_centos6
+        resource: bin_gpdb_photon3
         passed: [gate_resource_groups_start]
         trigger: [[ test_trigger ]]
       - get: ccp_src
-      - get: ccp-image
-      - get: binary_swap_gpdb
-        passed: [gate_resource_groups_start]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
   - put: terraform
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
+        PLATFORM: photon3
         instance_type: n1-standard-2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+      PLATFORM: photon3
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: ccp-image
+    image: gpdb6-photon3-test
     params:
-      TEST_OS: centos6
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
-{% if "centos7" in os_types %}
-- name: resource_group_centos7
-  plan:
-  - in_parallel:
-      steps:
-      - get: gpdb_src
-        passed: [gate_resource_groups_start]
-      - get: gpdb_binary
-        resource: bin_gpdb_centos7
-        passed: [gate_resource_groups_start]
-        trigger: [[ test_trigger ]]
-      - get: ccp_src
-      - get: ccp-image
-      - get: binary_swap_gpdb
-        passed: [gate_resource_groups_start]
-        resource: binary_swap_gpdb_centos6
-        trigger: [[ test_trigger ]]
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        PLATFORM: centos7
-        instance_type: n1-standard-2
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-      PLATFORM: centos7
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: ccp-image
-    params:
-      TEST_OS: centos7
+      TEST_OS: photon
     on_success:
       <<: *ccp_destroy
   ensure:
     <<: *set_failed
 
 {% endif %}
-
 {% endif %}
 
 {% if "Gpperfmon" in test_sections %}
@@ -2317,12 +2420,32 @@ jobs:
       steps:
       - get: gpdb_src
         passed:
+        {% if "photon3" in os_types %}
+        - compile_gpdb_photon3
+        {% endif %}
+        {% if "centos6" in os_types %}
         - compile_gpdb_centos6
+        {% endif %}
+        {% if "ubuntu18.04" in os_types %}
+        - compile_gpdb_ubuntu18.04
+        {% endif %}
         trigger: true
+      {% if "photon3" in os_types %}
+      - get: bin_gpdb_photon3
+        passed:
+        - compile_gpdb_photon3
+      {% endif %}
+      {% if "centos6" in os_types %}
       - get: bin_gpdb_centos6
         passed:
         - compile_gpdb_centos6
-
+      {% endif %}
+      {% if "ubuntu18.04" in os_types %}
+      - get: bin_gpdb_ubuntu18.04
+        passed:
+        - compile_gpdb_ubuntu18.04
+      {% endif %}
+{% if "centos6" in os_types %}
 - name: check_centos
   plan:
   - in_parallel:
@@ -2339,8 +2462,27 @@ jobs:
     image: gpdb6-centos6-test
     params:
       TEST_OS: centos
-
+{% endif %}
+{% if "photon3" in os_types %}
+- name: check_photon
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [gate_cli_start]
+      - get: bin_gpdb
+        resource: bin_gpdb_photon3
+        passed: [gate_cli_start]
+        trigger: [[ test_trigger ]]
+      - get: gpdb6-photon3-test
+  - task: check_photon
+    file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
+    image: gpdb6-photon3-test
+    params:
+      TEST_OS: photon
+{% endif %}
 {% for test in CLI_BEHAVE_TESTS %}
+{% if "centos6" in os_types %}
 - name: [[ test.name ]]
   plan:
     - in_parallel:
@@ -2396,7 +2538,8 @@ jobs:
             params:
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
               [[ test.env ]]
-
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
 - name: [[ test.name ]]_ubuntu18
   plan:
     - in_parallel:
@@ -2455,9 +2598,68 @@ jobs:
             params:
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
               [[ test.env ]]
-
+{% endif %}
+{% if "photon3" in os_types %}
+- name: [[ test.name ]]_photon3
+  plan:
+    - in_parallel:
+        steps:
+        - get: gpdb_src
+          params:
+            submodules:
+              - gpMgmt/bin/pythonSrc/ext
+          passed: [gate_cli_start]
+        - get: gpdb6-photon3-test
+    - in_parallel:
+        steps:
+      {% if test.use_concourse_cluster %}
+        - do:
+          - get: gpdb_binary
+            resource: bin_gpdb_photon3
+            passed: [gate_cli_start]
+            trigger: [[ test_trigger ]]
+          - get: ccp_src
+          - put: terraform
+            params:
+              <<: *ccp_default_params
+              vars:
+                <<: *ccp_default_vars
+                instance_type: n1-standard-2
+                PLATFORM: photon3
+                [[ test.additional_ccp_vars ]]
+          - task: gen_cluster
+            file: ccp_src/ci/tasks/gen_cluster.yml
+            params:
+              <<: *ccp_gen_cluster_default_params
+              PLATFORM: photon3
+          - task: gpinitsystem
+            file: ccp_src/ci/tasks/gpinitsystem.yml
+          - task: [[ test.name ]]_concourse_cluster_tests
+            file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
+            image: gpdb6-photon3-test
+            params:
+              BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+              [[ test.env ]]
+            on_success:
+              <<: *ccp_destroy
+            ensure:
+              <<: *set_failed
+        {% endif %}
+        - do:
+          - get: bin_gpdb
+            resource: bin_gpdb_photon3
+            passed: [gate_cli_start]
+            trigger: [[ test_trigger ]]
+          - task: [[ test.name ]]_demo_cluster_tests
+            file: gpdb_src/concourse/tasks/behave_gpdb.yml
+            image: gpdb6-photon3-test
+            params:
+              BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
+              [[ test.env ]]
+{% endif %}
 {% endfor %}
 
+{% if "centos6" in os_types %}
 - name: cli_cross_subnet
   plan:
     - in_parallel:
@@ -2592,7 +2794,147 @@ jobs:
     <<: *ccp_destroy_two_clusters
   ensure:
     <<: *set_failed_two_clusters
+{% endif %}
+{% if "photon3" in os_types %}
+- name: cli_cross_subnet_photon3
+  plan:
+    - in_parallel:
+      - get: gpdb_src
+        params:
+          submodules:
+            - gpMgmt/bin/pythonSrc/ext
+        passed: [gate_cli_start]
+      - get: gpdb6-photon3-test
+      - get: gpdb_binary
+        resource: bin_gpdb_photon3
+        passed: [gate_cli_start]
+        trigger: [[ test_trigger ]]
+      - get: ccp_src
+      - get: ccp-image
+      - get: alpine-docker
+    - task: generate-ssh-keys
+      image: alpine-docker
+      config:
+        platform: linux
+        outputs:
+          - name: ssh-extra-key
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+              apk add --update --no-progress openssh-client openssl
+              ssh-keygen -b 4096 -t rsa -m PEM -f ssh-extra-key/key -N "" -C ""
+              openssl rsa -in ssh-extra-key/key -pubout -out ssh-extra-key/key.pem
+              sed -i 's/*//;s/ *$//' ssh-extra-key/key.pub
+    - in_parallel:
+      - do:
+        - put: terraform_1
+          params:
+            <<: *ccp_default_params
+            vars:
+              <<: *ccp_default_vars
+              PLATFORM: photon3
+              instance_type: n1-standard-2
+              subnet: dynamic
+              cluster_suffix: '-1'
+              custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
+        - task: gen_cluster_1
+          file: ccp_src/ci/tasks/gen_cluster.yml
+          params:
+            <<: *ccp_gen_cluster_default_params
+            PLATFORM: photon3
+          input_mapping:
+            terraform: terraform_1
+          output_mapping:
+            cluster_env_files: cluster_1
+      - do:
+        - put: terraform_2
+          params:
+            <<: *ccp_default_params
+            vars:
+              PLATFORM: photon3
+              instance_type: n1-standard-2
+              subnet: toolshed
+              cluster_suffix: '-2'
+              custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
+        - task: gen_cluster_2
+          file: ccp_src/ci/tasks/gen_cluster.yml
+          params:
+            <<: *ccp_gen_cluster_default_params
+            PLATFORM: photon3
+          input_mapping:
+            terraform: terraform_2
+          output_mapping:
+            cluster_env_files: cluster_2
+    - task: exchange_keys
+      image: alpine-docker
+      config:
+        platform: linux
+        inputs:
+          - name: cluster_1
+          - name: cluster_2
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+              apk add --update --no-progress openssh-client
 
+              opts="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_1/private_key.pem"
+              while read -r ip host extra; do
+                  scp $opts cluster_2/.ssh/*private_key.pem gpadmin@"$ip":~/.ssh/
+                  ssh $opts gpadmin@"$ip" -- bash -c "cat - >> ~/.ssh/config && chmod 0600 ~/.ssh/config" < cluster_2/.ssh/config
+                  ssh $opts photon@"$ip" -- "sudo bash -c 'cat - >> /etc/hosts'" < cluster_2/etc_hostfile
+                  ssh $opts gpadmin@"$ip" -- bash -c "cat - >> ~/.ssh/known_hosts" < cluster_2/.ssh/known_hosts
+              done < cluster_1/etc_hostfile
+
+              opts="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_2/private_key.pem"
+              while read -r ip host extra; do
+                  scp $opts cluster_1/.ssh/*private_key.pem gpadmin@"$ip":~/.ssh/
+                  ssh $opts gpadmin@"$ip" -- bash -c "cat - >> ~/.ssh/config && chmod 0600 ~/.ssh/config" < cluster_1/.ssh/config
+                  ssh $opts photon@"$ip" -- "sudo bash -c 'cat - >> /etc/hosts'" < cluster_1/etc_hostfile
+                  ssh $opts gpadmin@"$ip" -- bash -c "cat - >> ~/.ssh/known_hosts" < cluster_1/.ssh/known_hosts
+              done < cluster_2/etc_hostfile
+    - task: combine_cluster_config_files
+      image: alpine-docker
+      config:
+        platform: linux
+        inputs:
+          - name: cluster_1
+          - name: cluster_2
+        outputs:
+          - name: cluster_env_files
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+              cp -r cluster_1/* cluster_env_files
+              cp -r cluster_1/.ssh cluster_env_files
+              cat cluster_2/hostfile_all >> cluster_env_files/hostfile_all
+              cat cluster_2/etc_hostfile >> cluster_env_files/etc_hostfile
+              cat cluster_2/hostfile_init >> cluster_env_files/hostfile_init
+
+              cp cluster_2/.ssh/*.pem cluster_env_files/.ssh
+              cat cluster_2/.ssh/known_hosts >> cluster_env_files/.ssh/known_hosts
+              cat cluster_2/.ssh/config >> cluster_env_files/.ssh/config
+              sed -i '/^Host mdw-1/ s/$/ mdw/' cluster_env_files/.ssh/config
+    - task: gpinitsystem
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+      params:
+        GPINIT_STANDBY_MASTER: '-s mdw-2'
+    - task: cross_subnet_tests
+      file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
+      image: ccp-image
+      params:
+        BEHAVE_FLAGS: --tags=cross_subnet
+        TEST_NAME: cross_subnet
+  on_success:
+    <<: *ccp_destroy_two_clusters
+  ensure:
+    <<: *set_failed_two_clusters
+{% endif %}
 {% if "centos6" in os_types and "ICW" in test_sections %}
 - name: pg_upgrade
   ensure:
@@ -2680,7 +3022,91 @@ jobs:
     <<: *set_failed
 
 {% endif %}
+{% if "photon3" in os_types and "ICW" in test_sections %}
+- name: pg_upgrade_photon3
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+      - get: bin_gpdb_photon3
+        trigger: [[ test_trigger ]]
+      - get: icw_planner_photon3_dump
+      - get: ccp_src
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        PLATFORM: photon3
+        instance_type: n1-standard-2
+        number_of_nodes: 2
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+      PLATFORM: photon3
+    input_mapping:
+      gpdb_binary: bin_gpdb_photon3
+  - task: set_gpinitsystem_config
+    file: gpdb_src/concourse/tasks/set_gpinitsystem_config.yml
+    params:
+      GPINITSYSTEM_CONFIG: gpdb_src/concourse/scripts/configurations/pg_upgrade_gpinitsystem_config
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: test_upgrade
+    file: gpdb_src/concourse/tasks/test_upgrade.yml
+    input_mapping:
+      sqldump: icw_planner_photon3_dump
+      bin_gpdb_centos6: bin_gpdb_photon3
+    params:
+      NUMBER_OF_NODES: 2
 
+- name: gpexpand_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        params:
+          submodules:
+          - gpMgmt/bin/pythonSrc/ext
+      - get: gpdb_binary
+        resource: bin_gpdb_photon3
+        trigger: [[ test_trigger ]]
+      - get: ccp_src
+      - get: ccp-image
+      - get: icw_planner_photon3_dump
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        PLATFORM: photon3
+        instance_type: n1-standard-4
+        number_of_nodes: 5
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+      PLATFORM: photon3
+  - task: pre_run_test_setup
+    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb_photon.yml
+    image: ccp-image
+    input_mapping: {sqldump: icw_planner_photon3_dump}
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
+    params:
+      BEHAVE_FLAGS: --tags=gpexpand
+    image: ccp-image
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
+{% endif %}
 {% endif %} # end CLI test_sections
 
 {% if "AA" in test_sections %}
@@ -2911,7 +3337,6 @@ jobs:
         - icw_gporca_icproxy_centos6
         - icw_planner_ictcp_centos6
         - icw_extensions_gpcloud_centos6
-        - resource_group_centos6
         - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]
@@ -2931,7 +3356,6 @@ jobs:
         - icw_planner_icproxy_centos7
         - icw_gporca_oracle7
         - icw_planner_oracle7
-        - resource_group_centos7
         - MADlib_Test_orca_centos7
         - MADlib_Test_planner_centos7
       - get: bin_gpdb_photon3
@@ -3240,4 +3664,40 @@ jobs:
           gpcloud_secret_access_key: ((gpcloud-secret-access-key))
           TARGET_OS: centos
 {% endif %}
+{% if 'photon3' in os_types%}
+- name: icw_extensions_gpcloud_photon3
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_photon3]
+        trigger: [[ test_trigger ]]
+      - get: bin_gpdb_photon3
+        passed: [compile_gpdb_photon3]
+      - get: gpdb6-photon3-test
+  - in_parallel:
+      steps:
+      - task: unit_tests_gpcloud
+        file: gpdb_src/concourse/tasks/unit_tests_gpcloud_photon3.yml
+        image: gpdb6-photon3-test
+        params:
+          TARGET_OS: photon
+      - task: regression_tests_gpcloud_photon
+        input_mapping:
+          bin_gpdb: bin_gpdb_photon3
+        file: gpdb_src/concourse/tasks/regression_tests_gpcloud_photon3.yml
+        image: gpdb6-photon3-test
+        params:
+          gpcloud_access_key_id: ((gpcloud-access-key-id))
+          gpcloud_secret_access_key: ((gpcloud-secret-access-key))
+          TARGET_OS: photon
+      - task: gpcheckcloud_tests_gpcloud_photon
+        input_mapping:
+          bin_gpdb: bin_gpdb_photon3
+        file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud_photon3.yml
+        image: gpdb6-photon3-test
+        params:
+          gpcloud_access_key_id: ((gpcloud-access-key-id))
+          gpcloud_secret_access_key: ((gpcloud-secret-access-key))
+          TARGET_OS: photon
 {% endif %}

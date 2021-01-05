@@ -37,7 +37,7 @@ class GpBuild:
         if no_mirrors:
             NO_MIRROR_STRING="NUM_PRIMARY_MIRROR_PAIRS=1 WITH_MIRRORS=false"
         return subprocess.call([
-            "runuser gpadmin -c \"source {0}/greenplum_path.sh \
+            "su gpadmin -c \"source {0}/greenplum_path.sh \
             && {1} make {2} create-demo-cluster DEFAULT_QD_MAX_CONNECT=150\"".format(install_dir, self.source_gcc_env_cmd, NO_MIRROR_STRING)],
             cwd="gpdb_src/gpAux/gpdemo", shell=True)
 
@@ -46,7 +46,7 @@ class GpBuild:
         if len(source_env_cmd) != 0:
             #over ride the command if requested
             cmd = source_env_cmd
-        runcmd = "runuser gpadmin -c \"{0} && {1} \"".format(cmd, command)
+        runcmd = "su gpadmin -c \"{0} && {1} \"".format(cmd, command)
         if print_command:
             print "Executing {}".format(runcmd)
         return subprocess.call([runcmd], shell=True, stdout=stdout, stderr=stderr)
