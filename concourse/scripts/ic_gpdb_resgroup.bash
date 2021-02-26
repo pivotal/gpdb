@@ -21,13 +21,14 @@ mount_cgroups() {
     local basedir=$CGROUP_BASEDIR
     local options=rw,nosuid,nodev,noexec,relatime
     local groups="cpuset blkio cpuacct cpu memory"
+    local photon3_groups="cpuset blkio cpu,cpuacct memory"
 
     if [ "$CGROUP_AUTO_MOUNTED" ]; then
         # nothing to do as cgroup is already automatically mounted
         return
     fi
-
-    ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+    if [ "$TEST_OS" = centos6 ]; then
+        ssh -t $gpdb_host_alias sudo bash -ex <<EOF
         mkdir -p $basedir
         mount -t tmpfs tmpfs $basedir
         for group in $groups; do
@@ -35,6 +36,21 @@ mount_cgroups() {
                 mount -t cgroup -o $options,\$group cgroup $basedir/\$group
         done
 EOF
+    fi
+
+     if [ "$TEST_OS" = photon3 ]; then
+         ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+        mkdir -p $basedir
+        mount -t tmpfs tmpfs $basedir
+        for group in $photon3_groups; do
+                mkdir -p $basedir/\$group
+                mount -t cgroup -o $options,\$group cgroup $basedir/\$group
+        done
+        ln -s $basedir/cpu,cpuacct $basedir/cpu
+        ln -s $basedir/cpu,cpuacct $basedir/cpuacct
+EOF
+     fi
+
 }
 
 make_cgroups_dir() {
