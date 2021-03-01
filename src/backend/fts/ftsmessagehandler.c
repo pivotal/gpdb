@@ -53,7 +53,7 @@ checkIODataDirectory(void)
 	errno = 0;
 	bool failure = false;
 
-	fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | PG_O_DIRECT | O_EXCL,
+	fd = BasicOpenFile(FTS_PROBE_FILE_NAME, O_RDWR | O_EXCL,
                                            S_IRUSR | S_IWUSR);
 	do
 	{
