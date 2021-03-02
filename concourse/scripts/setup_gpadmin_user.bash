@@ -59,6 +59,12 @@ set_limits() {
   su gpadmin -c 'ulimit -a'
 }
 
+set_photon_locale() {
+  if [[ "$TEST_OS" == *"photon"* ]]; then
+    echo "LANG=en_US.UTF-8" >> /home/gpadmin/.bash_profile
+  fi
+}
+
 setup_gpadmin_user() {
   groupadd supergroup
   case "$TEST_OS" in
@@ -73,7 +79,8 @@ setup_gpadmin_user() {
       /usr/sbin/useradd -U -G supergroup,tty gpadmin
       ;;
     photon*)
-      /usr/sbin/useradd -U -G supergroup,tty,root gpadmin
+      /usr/sbin/useradd -m -U -G supergroup,tty,root gpadmin
+      set_photon_locale
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
