@@ -33,9 +33,9 @@ SELECT * FROM test_sort ORDER BY NLSSORT(name, 'C');
 (4 rows)
 
 SELECT set_nls_sort('invalid');
- set_nls_sort
+ set_nls_sort 
 --------------
-
+ 
 (1 row)
 
 SELECT * FROM test_sort ORDER BY NLSSORT(name);
@@ -44,11 +44,11 @@ CONTEXT:  SQL function "nlssort" statement 1
 SELECT set_nls_sort('C');
  set_nls_sort 
 --------------
-
+ 
 (1 row)
 
 SELECT * FROM test_sort ORDER BY NLSSORT(name);
-  name
+  name  
 --------
  Purple
  brown
@@ -59,11 +59,11 @@ SELECT * FROM test_sort ORDER BY NLSSORT(name);
 SELECT set_nls_sort('');
  set_nls_sort 
 --------------
-
+ 
 (1 row)
 
 SELECT * FROM test_sort ORDER BY NLSSORT(name);
-  name
+  name  
 --------
  brown
  Purple
@@ -73,12 +73,12 @@ SELECT * FROM test_sort ORDER BY NLSSORT(name);
 
 INSERT INTO test_sort VALUES(NULL);
 SELECT * FROM test_sort ORDER BY NLSSORT(name);
-  name
+  name  
 --------
  brown
  Purple
  red
  yellow
-
+ 
 (5 rows)
 
