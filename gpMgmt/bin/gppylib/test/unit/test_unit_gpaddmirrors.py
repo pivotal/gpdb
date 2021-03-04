@@ -150,7 +150,7 @@ def _write_datadir_config(mdd):
     mirror_data_dir = os.path.join(mdd_parent_parent, 'mirror')
     if not os.path.exists(mirror_data_dir):
         os.mkdir(mirror_data_dir)
-    datadir_config = '/tmp/gpaddmirrors_datadir_config'
+    datadir_config = '/data/gpaddmirrors_datadir_config'
     contents = \
 """
 {0}

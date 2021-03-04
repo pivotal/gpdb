@@ -19,7 +19,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: spread mirroring configuration
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with "spread" segment mirroring on "mdw" and "sdw1, sdw2, sdw3"
         Then verify that mirror segments are in "spread" configuration
@@ -32,13 +32,13 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gprecoverseg works correctly on a newly added mirror with HBA_HOSTNAMES=0
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And with HBA_HOSTNAMES "0" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
+        And pg_hba file "/data/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
         And gpaddmirrors adds mirrors
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "samehost"
+        And pg_hba file "/data/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
+        And pg_hba file "/data/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "samehost"
         And verify that the file "pg_hba.conf" in each segment data directory has "no" line starting with "host.*replication.*\(127.0.0\|::1\).*trust"
         Then verify the database has mirrors
         And the information of a "mirror" segment on a remote host is saved
@@ -61,12 +61,12 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gprecoverseg works correctly on a newly added mirror with HBA_HOSTNAMES=1
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And with HBA_HOSTNAMES "1" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1"
+        And pg_hba file "/data/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1"
         And gpaddmirrors adds mirrors with options "--hba-hostnames"
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1, sdw2, samehost"
+        And pg_hba file "/data/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1, sdw2, samehost"
         Then verify the database has mirrors
         And the information of a "mirror" segment on a remote host is saved
         When user kills a "mirror" process with the saved information
@@ -88,7 +88,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gpaddmirrors puts mirrors on the same hosts when there is a standby configured
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors
@@ -104,7 +104,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gpaddmirrors puts mirrors on different host
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors in spread configuration
@@ -113,7 +113,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gpaddmirrors with a default master data directory
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And gpaddmirrors adds mirrors
@@ -122,7 +122,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gpaddmirrors with a given master data directory [-d <master datadir>]
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And gpaddmirrors adds mirrors with temporary data dir
@@ -131,7 +131,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gpaddmirrors mirrors are recognized after a cluster restart
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         When gpaddmirrors adds mirrors
@@ -147,7 +147,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: gpaddmirrors when the primaries have data
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And database "gptest" exists
@@ -166,7 +166,7 @@ Feature: Tests for gpaddmirrors
 
     @concourse_cluster
     Scenario: tablespaces work on a multi-host environment
-        Given a working directory of the test as '/tmp/gpaddmirrors'
+        Given a working directory of the test as '/data/gpaddmirrors'
           And the database is not running
           And a cluster is created with no mirrors on "mdw" and "sdw1"
           And a tablespace is created with data

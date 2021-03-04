@@ -24,7 +24,7 @@ class MirrorMgmtContext:
 
 def _generate_input_config(spread=False):
     datadir_config = _write_datadir_config()
-    mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
+    mirror_config_output_file = "/data/test_gpaddmirrors.config"
     cmd_str = 'gpaddmirrors -a -o %s -m %s' % (mirror_config_output_file, datadir_config)
     if spread:
         cmd_str += " -s"
@@ -40,7 +40,7 @@ def do_write(template, config_file_path):
 
 
 def _write_datadir_config():
-    datadir_config = '/tmp/gpaddmirrors_datadir_config'
+    datadir_config = '/data/gpaddmirrors_datadir_config'
     template = """
 {0}
 {0}
@@ -50,7 +50,7 @@ def _write_datadir_config():
 
 
 def _write_datadir_config_for_three_mirrors():
-    datadir_config='/tmp/gpaddmirrors_datadir_config'
+    datadir_config='/data/gpaddmirrors_datadir_config'
     template = """
 {0}
 {0}
@@ -63,7 +63,7 @@ def _write_datadir_config_for_three_mirrors():
 @when("gpaddmirrors adds 3 mirrors")
 def add_three_mirrors(context):
     datadir_config = _write_datadir_config_for_three_mirrors()
-    mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
+    mirror_config_output_file = "/data/test_gpaddmirrors.config"
     cmd_str = 'gpaddmirrors -o %s -m %s' % (mirror_config_output_file, datadir_config)
     Command('generate mirror_config file', cmd_str).run(validateAfter=True)
     cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % mirror_config_output_file)
@@ -209,13 +209,13 @@ def impl(context):
 def impl(context):
     context.expected_segs = []
 
-    context.expected_segs.append("sdw1-1|21500|/tmp/gpmovemirrors/data/mirror/gpseg2_moved")
-    context.expected_segs.append("sdw1-2|22501|/tmp/gpmovemirrors/data/mirror/gpseg3")
+    context.expected_segs.append("sdw1-1|21500|/data/gpmovemirrors/data/mirror/gpseg2_moved")
+    context.expected_segs.append("sdw1-2|22501|/data/gpmovemirrors/data/mirror/gpseg3")
 
-    input_filename = "/tmp/gpmovemirrors_input_cross_subnet"
+    input_filename = "/data/gpmovemirrors_input_cross_subnet"
     with open(input_filename, "w") as fd:
-        fd.write("sdw1-1|21500|/tmp/gpmovemirrors/data/mirror/gpseg2 %s\n" % context.expected_segs[0])
-        fd.write("sdw1-1|21501|/tmp/gpmovemirrors/data/mirror/gpseg3 %s" % context.expected_segs[1])
+        fd.write("sdw1-1|21500|/data/gpmovemirrors/data/mirror/gpseg2 %s\n" % context.expected_segs[0])
+        fd.write("sdw1-1|21501|/data/gpmovemirrors/data/mirror/gpseg3 %s" % context.expected_segs[1])
 
 
 @then('verify that mirror segments are in new cross_subnet configuration')
@@ -375,7 +375,7 @@ def impl(context, mirror_config):
         raise Exception('"%s" is not a valid mirror configuration for this step; options are "group" and "spread".')
 
     # Port numbers and addresses are hardcoded to TestCluster values, assuming a 3-host 2-segment cluster.
-    input_filename = "/tmp/gpmovemirrors_input_%s" % mirror_config
+    input_filename = "/data/gpmovemirrors_input_%s" % mirror_config
     line_template = "%s|%d|%s %s|%d|%s\n"
 
     # The mirrors for contents 0 and 3 are excluded from the two maps below because they are the same in either configuration

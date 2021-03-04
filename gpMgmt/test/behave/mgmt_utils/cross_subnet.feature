@@ -11,7 +11,7 @@ Feature: Tests for a cross_subnet cluster
 
     Scenario: gpinitstandby works across subnets
         Given the database is not running
-          And a working directory of the test as '/tmp/gpinitstandby'
+          And a working directory of the test as '/data/gpinitstandby'
           And a cross-subnet cluster without a standby is created with mirrors on "mdw-1" and "sdw1-1,sdw1-2"
          Then the primaries and mirrors excluding masterStandby are on different subnets
 
@@ -24,12 +24,12 @@ Feature: Tests for a cross_subnet cluster
 
     Scenario: gpmovemirrors can move mirrors between subnets
         Given the database is not running
-          And a working directory of the test as '/tmp/gpmovemirrors'
+          And a working directory of the test as '/data/gpmovemirrors'
           And a cross-subnet cluster without a standby is created with mirrors on "mdw-1" and "sdw1-1,sdw1-2"
          Then the primaries and mirrors excluding masterStandby are on different subnets
 
         Given a gpmovemirrors cross_subnet input file is created
-         When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_cross_subnet"
+         When the user runs "gpmovemirrors --input=/data/gpmovemirrors_input_cross_subnet"
          Then gpmovemirrors should return a return code of 0
           # Verify that mirrors are functional in the new configuration
           And verify the database has mirrors
@@ -40,7 +40,7 @@ Feature: Tests for a cross_subnet cluster
 
      Scenario Outline: gpaddmirrors works cross-subnet with pg_hba.conf using HBA_HOSTNAMES: <hba_hostnames>
         Given the database is not running
-          And a working directory of the test as '/tmp/gpaddmirrors'
+          And a working directory of the test as '/data/gpaddmirrors'
          When with HBA_HOSTNAMES "<hba_hostnames>" a cross-subnet cluster without a standby is created with no mirrors on "mdw-1" and "sdw1-1, sdw1-2"
 
          When gpaddmirrors adds mirrors with options "<options>"

@@ -23,7 +23,7 @@ class CleanSharedMemTestCase(GpTestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.unix.WorkerPool')
     def test_run(self, mock1, mock2):
-        segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
+        segments = [self._get_mock_segment('seg1', '/data/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfads\nasdfsd asdfadsf\n12345 23456'.split()
         m = MagicMock()
@@ -34,14 +34,14 @@ class CleanSharedMemTestCase(GpTestCase):
     @patch('os.path.isfile', return_value=False)
     @patch('gppylib.operations.unix.WorkerPool')
     def test_run_with_no_pid_file(self, mock1, mock2):
-        segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
+        segments = [self._get_mock_segment('seg1', '/data/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         c.run()
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, '', '', False, False))
     def test_run_with_invalid_pid_file(self, mock1, mock2):
-        segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
+        segments = [self._get_mock_segment('seg1', '/data/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfadsasdfasdf'.split()
         m = MagicMock()
@@ -54,7 +54,7 @@ class CleanSharedMemTestCase(GpTestCase):
     @patch('gppylib.operations.unix.Command.run')
     @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, '', '', False, False))
     def test_run_with_error_in_workerpool(self, mock1, mock2, mock3):
-        segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
+        segments = [self._get_mock_segment('seg1', '/data/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfads\nasdfsd asdfadsf\n12345 23456'.split()
         m = MagicMock()

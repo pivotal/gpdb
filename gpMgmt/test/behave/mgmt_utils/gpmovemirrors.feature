@@ -3,28 +3,28 @@ Feature: Tests for gpmovemirrors
 
     Scenario: gpmovemirrors fails with totally malformed input file
         Given a standard local demo cluster is running
-        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
         And a 'malformed' gpmovemirrors file is created
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 3
 
     Scenario: gpmovemirrors fails with bad host in input file
         Given a standard local demo cluster is running
-        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
         And a 'badhost' gpmovemirrors file is created
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 3
 
     Scenario: gpmovemirrors fails with invalid option parameter
         Given a standard local demo cluster is running
-        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
         And a 'good' gpmovemirrors file is created
         When the user runs gpmovemirrors with additional args "--invalid-option"
         Then gpmovemirrors should return a return code of 2
 
     Scenario: gpmovemirrors can change the location of mirrors within a single host
         Given a standard local demo cluster is created
-        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
         And a 'good' gpmovemirrors file is created
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
@@ -35,7 +35,7 @@ Feature: Tests for gpmovemirrors
 
     Scenario: gpmovemirrors can change the port of mirrors within a single host
         Given a standard local demo cluster is created
-        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
         And a 'samedir' gpmovemirrors file is created
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
@@ -46,7 +46,7 @@ Feature: Tests for gpmovemirrors
 
     Scenario: gpmovemirrors gives a warning when passed identical attributes for new and old mirrors
         Given a standard local demo cluster is created
-        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
         And a 'identicalAttributes' gpmovemirrors file is created
         When the user runs gpmovemirrors
         Then gpmovemirrors should return a return code of 0
@@ -59,7 +59,7 @@ Feature: Tests for gpmovemirrors
     Scenario: tablespaces work
         Given a standard local demo cluster is created
           And a tablespace is created with data
-          And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+          And a gpmovemirrors directory under '/data/gpmovemirrors' with mode '0700' is created
           And a 'good' gpmovemirrors file is created
          When the user runs gpmovemirrors
          Then gpmovemirrors should return a return code of 0
@@ -77,7 +77,7 @@ Feature: Tests for gpmovemirrors
         Given verify that mirror segments are in "group" configuration
         And pg_hba file "/data/gpdata/primary/gpseg1/pg_hba.conf" on host "sdw1" contains only cidr addresses
         And a sample gpmovemirrors input file is created in "spread" configuration
-        When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_spread"
+        When the user runs "gpmovemirrors --input=/data/gpmovemirrors_input_spread"
         Then gpmovemirrors should return a return code of 0
         # Verify that mirrors are functional in the new configuration
         Then verify the database has mirrors
@@ -112,7 +112,7 @@ Feature: Tests for gpmovemirrors
     Scenario: gpmovemirrors can change from spread mirroring to group mirroring
         Given verify that mirror segments are in "spread" configuration
         And a sample gpmovemirrors input file is created in "group" configuration
-        When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_group --hba-hostnames"
+        When the user runs "gpmovemirrors --input=/data/gpmovemirrors_input_group --hba-hostnames"
         Then gpmovemirrors should return a return code of 0
         # Verify that mirrors are functional in the new configuration
         Then verify the database has mirrors
@@ -149,7 +149,7 @@ Feature: Tests for gpmovemirrors
         Given verify that mirror segments are in "group" configuration
           And a tablespace is created with data
           And a sample gpmovemirrors input file is created in "spread" configuration
-         When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_spread"
+         When the user runs "gpmovemirrors --input=/data/gpmovemirrors_input_spread"
          Then gpmovemirrors should return a return code of 0
           And verify the database has mirrors
           And all the segments are running

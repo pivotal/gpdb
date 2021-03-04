@@ -18,12 +18,12 @@ Feature: gpinitsystem tests
         And gpconfig should print "Segment value: off" to stdout
 
     Scenario: gpinitsystem creates a cluster with a legacy input initialization file
-        Given a working directory of the test as '/tmp/gpinitsystem'
+        Given a working directory of the test as '/data/gpinitsystem'
         And the database is not running
-        And a legacy initialization file format "/tmp/gpinitsystem/initializationFile" is created
-        When the user runs command "gpinitsystem -aI /tmp/gpinitsystem/initializationFile --ignore-warnings"
+        And a legacy initialization file format "/data/gpinitsystem/initializationFile" is created
+        When the user runs command "gpinitsystem -aI /data/gpinitsystem/initializationFile --ignore-warnings"
         Then gpinitsystem should return a return code of 0
-        Given the cluster with master data directory "/tmp/gpinitsystem/gpseg-1" is stopped
+        Given the cluster with master data directory "/data/gpinitsystem/gpseg-1" is stopped
 
     Scenario: gpinitsystem creates a cluster when the user confirms the dialog when --ignore-warnings is passed in
         Given create demo cluster config
@@ -58,13 +58,13 @@ Feature: gpinitsystem tests
     Scenario: gpinitsystem fails with exit code 2 when the functions file is not found
        Given create demo cluster config
            # force a load error when trying to source gp_bash_functions.sh
-        When the user runs command "ln -s -f `which gpinitsystem` /tmp/gpinitsystem-link; . /tmp/gpinitsystem-link" eok
+        When the user runs command "ln -s -f `which gpinitsystem` /data/gpinitsystem-link; . /data/gpinitsystem-link" eok
         Then gpinitsystem should return a return code of 2
 
     Scenario: gpinitsystem fails with exit code 2 when the functions file is not found when passing the --ignore-warnings flag
         Given create demo cluster config
            # force a load error when trying to source gp_bash_functions.sh
-        When the user runs command "ln -s -f `which gpinitsystem` /tmp/gpinitsystem-link; . /tmp/gpinitsystem-link --ignore-warnings" eok
+        When the user runs command "ln -s -f `which gpinitsystem` /data/gpinitsystem-link; . /data/gpinitsystem-link --ignore-warnings" eok
         Then gpinitsystem should return a return code of 2
 
     Scenario: gpinitsystem returns exit code 1 when gpinitstandby fails
@@ -102,7 +102,7 @@ Feature: gpinitsystem tests
         And all the segments are running
         And the segments are synchronized
         And the standby is not initialized
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        And the user runs command "rm -rf /data/gpinitsystemtest && mkdir /data/gpinitsystemtest"
         # stop db and make sure cluster config exists so that we can manually initialize standby
         And the cluster config is generated with data_checksums "1"
         When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -s localhost -P 21100 -S /wrong/path -h ../gpAux/gpdemo/hostfile --ignore-warnings"
@@ -134,7 +134,7 @@ Feature: gpinitsystem tests
         And all the segments are running
         And the segments are synchronized
         And the standby is not initialized
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        And the user runs command "rm -rf /data/gpinitsystemtest && mkdir /data/gpinitsystemtest"
         # stop db and make sure cluster config exists so that we can manually initialize standby
         And the cluster config is generated with data_checksums "1"
         When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -s localhost -P 21100 -S /wrong/path -h ../gpAux/gpdemo/hostfile"
@@ -177,9 +177,9 @@ Feature: gpinitsystem tests
         And the segments are synchronized
         And the standby is not initialized
         And the user runs command "rm -rf $MASTER_DATA_DIRECTORY/newstandby"
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        And the user runs command "rm -rf /data/gpinitsystemtest && mkdir /data/gpinitsystemtest"
         And the cluster config is generated with data_checksums "1"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -S $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /data/gpinitsystemtest -s localhost -P 21100 -S $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 0
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
@@ -191,8 +191,8 @@ Feature: gpinitsystem tests
         And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
         And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
         And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And the user runs command "rm -rf /data/gpinitsystemtest && mkdir /data/gpinitsystemtest"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /data/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
         And gpinitsystem should return a return code of 0
         Then the database timezone is saved
         And the database timezone matches the system timezone
@@ -205,8 +205,8 @@ Feature: gpinitsystem tests
         And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
         And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
         And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
-        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And the user runs command "rm -rf /data/gpinitsystemtest && mkdir /data/gpinitsystemtest"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /data/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
         And gpinitsystem should return a return code of 0
         Then the database timezone is saved
         And the database timezone matches "HST"
@@ -246,10 +246,10 @@ Feature: gpinitsystem tests
     Scenario: gpinitsystem on a DCA system is able to set the DCA specific GUCs
 	Given create demo cluster config
         And the user runs command "rm -r ~/gpAdminLogs/gpinitsystem*"
-        And a working directory of the test as '/tmp/gpinitsystem'
+        And a working directory of the test as '/data/gpinitsystem'
         # create a dummy dca version file so that DCA specific parameters are set
-        And the user runs command "touch /tmp/gpinitsystem/gpdb-appliance-version"
-        When the user runs command "source $GPHOME/greenplum_path.sh; __DCA_VERSION_FILE__=/tmp/gpinitsystem/gpdb-appliance-version $GPHOME/bin/gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
+        And the user runs command "touch /data/gpinitsystem/gpdb-appliance-version"
+        When the user runs command "source $GPHOME/greenplum_path.sh; __DCA_VERSION_FILE__=/data/gpinitsystem/gpdb-appliance-version $GPHOME/bin/gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
         # the log file must have the entry indicating that DCA specific configuration has been set
         And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"

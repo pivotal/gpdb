@@ -456,9 +456,9 @@ Feature: expand the cluster by adding more segments
         Given the database is not running
         # need to remove this log because otherwise SCAN_LOG may pick up a previous error/warning in the log
         And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
-        And a working directory of the test as '/tmp/gpexpand_behave'
-        And the user runs command "rm -rf /tmp/gpexpand_behave/*"
-        And a temporary directory under "/tmp/gpexpand_behave/expandedData" to expand into
+        And a working directory of the test as '/data/gpexpand_behave'
+        And the user runs command "rm -rf /data/gpexpand_behave/*"
+        And a temporary directory under "/data/gpexpand_behave/expandedData" to expand into
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And database "gptest" exists
         And create database schema table with special character

@@ -2667,11 +2667,11 @@ def step_impl(context, options):
 @given('ensure the standby directory does not exist')
 def impl(context):
     run_command(context, 'rm -rf $MASTER_DATA_DIRECTORY/newstandby')
-    run_command(context, 'rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest')
+    run_command(context, 'rm -rf /data/gpinitsystemtest && mkdir /data/gpinitsystemtest')
 
 @when('initialize a cluster with standby using "{config_file}"')
 def impl(context, config_file):
-    run_gpcommand(context, 'gpinitsystem -a -I %s -l /tmp/gpinitsystemtest -s localhost -P 21100 -S $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile' % config_file)
+    run_gpcommand(context, 'gpinitsystem -a -I %s -l /data/gpinitsystemtest -s localhost -P 21100 -S $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile' % config_file)
     check_return_code(context, 0)
 
 @when('initialize a cluster using "{config_file}"')

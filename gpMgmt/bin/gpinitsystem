@@ -70,7 +70,7 @@ GP_PASSWD=gparray
 TMP_PG_HBA=/tmp/pg_hba_conf_master.$$
 TMP_FILE=/tmp/cluster_tmp_file.$$
 TMP_HOSTNAME_FILE=/tmp/hostname_test_file.$$
-PARALLEL_STATUS_FILE=/tmp/gpinitsystem_parallel_status_file.$$
+PARALLEL_STATUS_FILE=/data/gpinitsystem_parallel_status_file.$$
 GPCREATESEG=$WORKDIR/lib/gpcreateseg.sh
 ULIMIT_WARN=0
 MIRROR_TYPE=0 # 0 = group, 1 = spread
