@@ -10,6 +10,8 @@ GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
 GREENPLUM_CL_INSTALL_DIR=/usr/local/greenplum-clients-devel
 GPDB_CL_FILENAME=${GPDB_CL_FILENAME:="gpdb-clients-${TARGET_OS}${TARGET_OS_VERSION}.tar.gz"}
 
+GPDB_BUILD_DEPENDENCIES=${GPDB_BUILD_DEPENDENCIES:="/gpdb6-build-dependencies"}
+
 function expand_glob_ensure_exists() {
   local -a glob=($*)
   [ -e "${glob[0]}" ]
@@ -73,21 +75,31 @@ function install_libuv() {
 
 
 function install_deps_for_centos_or_sles() {
-  rpm -i libquicklz-installer/libquicklz-*.rpm
-  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+  if ! rpm -qa | grep libquicklz; then
+    rpm -i libquicklz-installer/libquicklz-*.rpm
+    rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+  fi
   # install libsigar from tar.gz
   if [[ "${TARGET_OS}" != "centos" ]] || [[ "${TARGET_OS_VERSION}" != "8"  ]] ; then
-    tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
+    if [[ -f ${GPDB_BUILD_DEPENDENCIES}/sigar-*.targz ]] ; then
+      tar zxf ${GPDB_BUILD_DEPENDENCIES}/sigar-*.targz -C gpdb_src/gpAux/ext
+    else
+      tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
+    fi
   fi
 }
 
 function install_deps_for_photon() {
-  rpm -i libquicklz-installer/libquicklz-*.rpm
-  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+  if ! rpm -qa | grep libquicklz; then
+    rpm -i libquicklz-installer/libquicklz-*.rpm
+    rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+  fi
 }
 
 function install_deps_for_ubuntu() {
-  dpkg --install libquicklz-installer/libquicklz-*.deb
+  if ! dpkg-query -l | grep libquicklz; then
+    dpkg --install libquicklz-installer/libquicklz-*.deb
+  fi
 }
 
 function install_deps() {
@@ -100,7 +112,11 @@ function install_deps() {
 }
 
 function link_python() {
-  tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
+  if [[ -f ${GPDB_BUILD_DEPENDENCIES}/python-*.targz ]] ; then
+    tar xf ${GPDB_BUILD_DEPENDENCIES}/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
+  else
+    tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
+  fi
   if [[ "${TARGET_OS}" == "centos" ]] && [[ "${TARGET_OS_VERSION}" == "8"  ]] ; then
     ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.17 /opt/python-2.7.17
   else
