@@ -390,6 +390,15 @@ resources:
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
 
+- name: terraform.d
+  source:
+    access_key_id: ((bucket-access-key-id))
+    bucket: ccp-terraform-provider-plugins
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
+    versioned_file: plugin-cache.tgz
+  type: s3
+
 {% endif %}
 {% if "DPM" in test_sections %}
 # a second cluster for gptransfer tests
@@ -884,7 +893,14 @@ ccp_default_params_anchor: &ccp_default_params
   action: create
   delete_on_failure: true
   generate_random_name: true
+  plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
   terraform_source: ccp_src/google/
+
+ccp_aws_default_params_anchor: &ccp_aws_default_params
+  action: create
+  delete_on_failure: true
+  generate_random_name: true
+  terraform_source: ccp_src/aws/
 
 ccp_vars_anchor: &ccp_default_vars
   instance_type: n1-standard-1
@@ -899,6 +915,7 @@ ccp_destroy_anchor: &ccp_destroy
   params:
     action: destroy
     env_name_file: terraform/name
+    plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
     terraform_source: ccp_src/google/
     vars:
       aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
@@ -911,6 +928,7 @@ ccp_nvme_destroy_anchor: &ccp_destroy_nvme
   params:
     action: destroy
     env_name_file: terraform/name
+    plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
     terraform_source: ccp_src/google-nvme-block-device/
     vars:
       aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
@@ -926,6 +944,7 @@ ccp_destroy_clusters_anchor: &ccp_destroy_two_clusters
     params:
       action: destroy
       env_name_file: terraform2/name
+      plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
       terraform_source: ccp_src/google/
       vars:
         PLATFORM: centos6
@@ -1047,6 +1066,9 @@ cs_ccp_aggregate_mpp_start_anchor: &cs_ccp_aggregate_mpp_start
     trigger: [[ test_trigger ]]
   - get: ccp_src
   - get: centos-gpdb-dev-6
+  - get: terraform.d
+    params:
+      unpack: true
 
 cs_ccp_terraform_vars_anchor: &cs_ccp_terraform_vars
   instance_type: n1-standard-2
@@ -1948,11 +1970,15 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: ccp-image
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       action: create
       delete_on_failure: true
       generate_random_name: true
+      plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
       terraform_source: ccp_src/google/
       vars:
         PLATFORM: "centos6-fips"
@@ -2082,6 +2108,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2117,6 +2146,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2314,6 +2346,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     <<: *cs_ccp_terraform_params
   - task: gen_cluster
@@ -2346,6 +2381,9 @@ jobs:
       resource: binary_swap_gpdb_centos6
       passed: [gate_mpp_start]
       trigger: [[ test_trigger ]]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2386,6 +2424,9 @@ jobs:
       resource: binary_swap_gpdb_centos6
       passed: [gate_mpp_start]
       trigger: [[ test_trigger ]]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2489,6 +2530,9 @@ jobs:
       passed: [prepare_binary_swap_gpdb_centos6]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2530,6 +2574,9 @@ jobs:
       passed: [prepare_binary_swap_gpdb_centos6]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2589,6 +2636,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2670,6 +2720,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2759,6 +2812,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2798,10 +2854,12 @@ jobs:
       tags: ["ddboost"]
     - get: ddboost_rpm
       tags: ["ddboost"]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform_for_dpm
     params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws/
+      <<: *ccp_aws_default_params
       vars:
         <<: *ccp_aws_default_vars
     tags: ["ddboost"]
@@ -2875,10 +2933,12 @@ jobs:
       tags: ["ddboost"]
     - get: ddboost_rpm
       tags: ["ddboost"]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform_for_dpm
     params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws/
+      <<: *ccp_aws_default_params
       vars:
         <<: *ccp_aws_default_vars
     tags: ["ddboost"]
@@ -2952,10 +3012,12 @@ jobs:
       tags: ["ddboost"]
     - get: ddboost_rpm
       tags: ["ddboost"]
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform_for_dpm
     params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws/
+      <<: *ccp_aws_default_params
       vars:
         <<: *ccp_aws_default_vars
     tags: ["ddboost"]
@@ -3028,6 +3090,9 @@ jobs:
       resource: bin_gpdb4_centos6
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -3074,6 +3139,9 @@ jobs:
       resource: bin_gpdb4_centos6
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - in_parallel:
@@ -3178,6 +3246,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - in_parallel:
@@ -3564,6 +3635,9 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: terraform.d
+      params:
+        unpack: true
   - put: terraform
     params:
       <<: *ccp_default_params
