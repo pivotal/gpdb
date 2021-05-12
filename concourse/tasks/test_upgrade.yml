@@ -3,9 +3,6 @@ platform: linux
 
 image_resource:
   type: registry-image
-  source:
-    repository: pivotaldata/ccp
-    tag: "7"
 
 inputs:
 - name: terraform

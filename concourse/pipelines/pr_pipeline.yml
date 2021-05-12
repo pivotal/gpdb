@@ -27,12 +27,18 @@ resources:
 - name: gpdb6-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos7-build
+    tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 - name: gpdb6-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos7-test
+    tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 jobs:
 - name: compile_and_test_gpdb

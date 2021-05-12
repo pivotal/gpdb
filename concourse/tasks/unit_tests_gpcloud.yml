@@ -1,11 +1,6 @@
 platform: linux
 image_resource:
   type: registry-image
-  source:
-    repository: pivotaldata/centos6-test
-    tag: gpdb6-latest
-    username:
-    password:
 inputs:
   - name: gpdb_src
 run:

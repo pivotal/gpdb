@@ -108,8 +108,10 @@ anchors:
         image_resource:
           type: registry-image
           source:
-            repository: pivotaldata/ccp
-            tag: "7"
+            repository: gcr.io/data-gpdb-ci/ccp
+            tag: "latest"
+            username: _json_key
+            password: ((container-registry-readonly-service-account-key))
         inputs:
           - name: ccp_src
           - name: terraform
@@ -131,8 +133,10 @@ anchors:
   image_resource:
     type: registry-image
     source:
-      repository: pivotaldata/ccp
-      tag: "7"
+      repository: gcr.io/data-gpdb-ci/ccp
+      tag: "latest"
+      username: _json_key
+      password: ((container-registry-readonly-service-account-key))
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
@@ -538,8 +542,10 @@ resources:
 - name: ccp-image
   type: registry-image
   source:
-    repository: pivotaldata/ccp
-    tag: '7'
+    repository: gcr.io/data-gpdb-ci/ccp
+    tag: 'latest'
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 {% endif %}
 {% endif %}
@@ -575,51 +581,65 @@ resources:
 - name: gpdb6-centos6-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos6-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos6-build
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 - name: gpdb6-centos6-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos6-test
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos6-test
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 {% endif %}
 {% if "centos7" in os_types %}
 - name: gpdb6-centos7-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos7-build
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 - name: gpdb6-centos7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos7-test
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos7-test
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 {% endif %}
 {% if "centos8" in os_types %}
 - name: gpdb6-centos8-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-centos8-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-centos8-build
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "photon3" in os_types %}
 - name: gpdb6-photon3-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-photon3-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-photon3-build
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "oracle7" in os_types %}
 - name: gpdb6-oracle7-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-oel7-test
+    repository: gcr.io/data-gpdb-ci/gpdb6-oel7-test
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 {% endif %}
 
@@ -627,14 +647,18 @@ resources:
 - name: gpdb6-ubuntu18.04-build
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-ubuntu18.04-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-ubuntu18.04-build
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 - name: gpdb6-ubuntu18.04-test
   type: registry-image
   source:
-    repository: pivotaldata/gpdb6-ubuntu18.04-test
+    repository: gcr.io/data-gpdb-ci/gpdb6-ubuntu18.04-test
     tag: latest
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 {% endif %}
 
@@ -642,10 +666,10 @@ resources:
 - name: gpdb6-sles12-build
   type: docker-image
   source:
-    repository: pivotaldata/gpdb6-sles12-build
+    repository: gcr.io/data-gpdb-ci/gpdb6-sles12-build
     tag: latest
-    username: ((docker_username))
-    password: ((docker_password))
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "centos6" in os_types %}
@@ -1744,8 +1768,10 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: pivotaldata/ccp
-          tag: "7"
+          repository: gcr.io/data-gpdb-ci/ccp
+          tag: "latest"
+          username: _json_key
+          password: ((container-registry-readonly-service-account-key))
       inputs:
         - name: ccp_src
         - name: cluster_env_files
@@ -2396,6 +2422,7 @@ jobs:
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: test_upgrade
+    image: ccp-image
     file: gpdb_src/concourse/tasks/test_upgrade.yml
     input_mapping:
       sqldump: icw_planner_centos6_dump
@@ -2761,6 +2788,7 @@ jobs:
       - get: bin_gpdb_photon3
         passed: [compile_gpdb_photon3]
   - task: rename server build artifacts
+    image: gpdb6-centos6-build
     file: gpdb_src/concourse/tasks/rename-server-build.yml
     params:
       RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
@@ -2821,6 +2849,7 @@ jobs:
   - in_parallel:
       steps:
       - task: rename_rc_artifacts
+        image: gpdb6-centos6-build
         file: gpdb_src/concourse/tasks/rename_rc_artifacts.yml
         params:
           RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
