@@ -463,8 +463,10 @@ resources:
 - name: centos-mingw
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb5-centos6-build-mingw
+    repository: gcr.io/data-gpdb-private-images/gpdb5-centos6-build-mingw
     tag: 'latest'
+    username: _json_key
+    password: ((container-registry-readonly-service-account-key))
 
 - name: bin_gpdb_centos6
   type: s3
