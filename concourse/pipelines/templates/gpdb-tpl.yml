@@ -555,6 +555,14 @@ resources:
   source:
     branch: main
     uri: https://github.com/greenplum-db/greenplum-database-release.git
+
+- name: license_file
+  type: gcs
+  icon: google
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: osl/released/gpdb5/open_source_license_GPDB_-_(5\.18\.0\.0)_-_GA.txt
 {% endif %}
 
 - name: binary_swap_gpdb_centos6
@@ -3294,10 +3302,11 @@ jobs:
           - get: centos-gpdb-dev-6
           - get: centos-gpdb-dev-7
           - get: greenplum-database-release
+          - get: license_file
     - in_parallel:
         steps:
           - task: build_rpm_gpdb_centos6
-            file: greenplum-database-release/ci/concourse/tasks/build-gpdb5-rpm.yml
+            file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
             vars:
               concourse-root: gpdb5/concourse
             image: centos-gpdb-dev-6
@@ -3312,7 +3321,7 @@ jobs:
               GPDB_URL: https://docs.greenplum.org
               GPDB_RELEASE: 1
           - task: build_rpm_gpdb_centos7
-            file: greenplum-database-release/ci/concourse/tasks/build-gpdb5-rpm.yml
+            file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
             vars:
               concourse-root: gpdb5/concourse
             image: centos-gpdb-dev-7
