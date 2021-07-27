@@ -9,7 +9,10 @@ inputs:
   - name: gpdb_src
     path: .
 run:
-  path: src/tools/fmt
-  args: [ chk ]
+  path: /bin/bash
+  args:
+  - -exc
+  - |
+    exit 1
 params:
   CLANG_FORMAT: clang-format-11
