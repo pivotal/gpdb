@@ -764,7 +764,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server-src/published/gpdb6/server-src-rc-*.tar.gz
+    regexp: server-src/published/gpdb6/((server-src-rc-prefix))server-src-rc-*.tar.gz
 {% endif %}
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm %}
@@ -2922,6 +2922,7 @@ jobs:
       - task: tar_git_repo
         file: gpdb_src/concourse/tasks/tar_git_repo.yml
         params:
+          SERVER_SRC_RC_PREFIX: ((server-src-rc-prefix))
           RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
   - in_parallel:
       steps:
@@ -2960,7 +2961,7 @@ jobs:
           file: "release_candidates/clients-rc-*sles12*.tar.gz"
       - put: server_src_rc
         params:
-          file: "server_tar/server-src-rc-*.tar.gz"
+          file: "server_tar/((server-src-rc-prefix))server-src-rc-*.tar.gz"
 
 {% endif %}
 
