@@ -51,9 +51,9 @@ function link_python() {
 function build_gpdb() {
 	pushd ${GPDB_SRC_PATH}/gpAux
 	if [ -n "$1" ]; then
-		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
+		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)"  dist
 	else
-		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
+		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)"  dist
 	fi
 	popd
 }
@@ -173,6 +173,7 @@ function _main() {
 	if echo "${BLD_TARGETS}" | grep -qwi "clients"; then
 		export_gpdb_clients
 	fi
+	exit 1
 
 }
 
