@@ -92,7 +92,7 @@ function include_dependencies() {
 	header_search_path=( /usr/local/include/ /usr/include/ )
 	vendored_headers=(zstd*.h uv.h uv )
 	pkgconfigs=(libzstd.pc libuv.pc quicklz.pc)
-	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0} libxerces-c{,-3.1}.so)
+	vendored_libs=(libquicklz.so{,.1,.1.5.0} libzstd.so{,.1,.1.3.7,.1.4.4} libuv.so{,.1,.1.0.0} libxerces-c{,-3.1}.so)
 
 	if [[ -d /opt/gcc-6.4.0 ]]; then
 		vendored_libs+=(libstdc++.so.6{,.0.22})

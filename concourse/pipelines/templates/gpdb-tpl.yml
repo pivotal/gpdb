@@ -647,7 +647,7 @@ resources:
   type: registry-image
   source:
     repository: gcr.io/data-gpdb-private-images/gpdb6-rhel8-build
-    tag: latest
+    tag: os-deps
     username: _json_key
     password: ((container-registry-readonly-service-account-key))
 - name: gpdb6-rhel8-test
