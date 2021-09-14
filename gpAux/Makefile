@@ -122,7 +122,7 @@ ORCA_CONFIG=--enable-orca
 
 rhel6_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
 rhel7_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
-rhel8_x86_64_CONFIGFLAGS=--with-quicklz  --disable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml
+rhel8_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
 ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
 sles12_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
