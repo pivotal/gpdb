@@ -45,7 +45,7 @@ if [ $? != 0 ];then
 fi
 
 IPV4_ONLY=0
-ifconfig -a | grep inet6
+ip -6 a
 if [ $? == 0 ]; then
 	IPV4_ONLY=0
 else
