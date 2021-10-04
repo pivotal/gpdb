@@ -146,14 +146,6 @@ function export_gpdb_clients() {
 	popd
 }
 
-function build_xerces() {
-	OUTPUT_DIR="${GPDB_EXT_PATH}"
-	mkdir -p xerces_patch/concourse
-	cp -r gpdb_src/src/backend/gporca/concourse/xerces-c xerces_patch/concourse
-	/usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir="${OUTPUT_DIR}"
-	rm -rf build
-}
-
 function _main() {
 
 	prep_env
@@ -161,7 +153,6 @@ function _main() {
 	## Add CCache Support (?)
 	add_ccache_support "${OS}"
 
-	build_xerces
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"
 	git_info
