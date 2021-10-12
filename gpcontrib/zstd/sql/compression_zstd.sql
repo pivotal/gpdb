@@ -12,7 +12,7 @@ INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_series(1, 100000) g;
 INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_series(1, 100000) g;
 
 -- Check that we actually compressed data
-SELECT get_ao_compression_ratio('zstdtest');
+SELECT get_ao_compression_ratio('zstdtest') >= 2.62;
 
 -- Check contents, at the beginning of the table and at the end.
 SELECT * FROM zstdtest ORDER BY (id, t) LIMIT 5;
