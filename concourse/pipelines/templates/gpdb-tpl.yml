@@ -311,6 +311,10 @@ groups:
   - MADlib_Test_orca_centos7
   - MADlib_Test_planner_centos7
 {% endif %}
+{% if "rhel8" in os_types %}
+  - MADlib_Test_orca_rhel8
+  - MADlib_Test_planner_rhel8
+{% endif %}
 {% endif %}
  ## ---------------------------------------------------------------------
 {% if "Extensions" in test_sections %}
@@ -504,6 +508,10 @@ groups:
 {% if "centos7" in os_types %}
   - MADlib_Test_orca_centos7
   - MADlib_Test_planner_centos7
+{% endif %}
+{% if "rhel8" in os_types %}
+  - MADlib_Test_orca_rhel8
+  - MADlib_Test_planner_rhel8
 {% endif %}
 {% endif %}
 
@@ -1059,6 +1067,13 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/madlib_gppkg/madlib-master-gp6-rhel7-x86_64.gppkg
+
+- name: madlib_gppkg_rhel8
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/madlib_gppkg/madlib-master-gp6-rhel8-x86_64.gppkg
 
 - name: cmake_tar
   type: gcs
@@ -2917,6 +2932,9 @@ jobs:
 {% if "centos7" in os_types %}
         - compile_gpdb_centos7
 {% endif %}
+{% if "rhel8" in os_types %}
+        - compile_gpdb_rhel8
+{% endif %}
         trigger: true
 {% if "centos6" in os_types %}
       - get: bin_gpdb_centos6
@@ -2927,6 +2945,11 @@ jobs:
       - get: bin_gpdb_centos7
         passed:
         - compile_gpdb_centos7
+{% endif %}
+{% if "rhel8" in os_types %}
+      - get: bin_gpdb_rhel8
+        passed:
+        - compile_gpdb_rhel8
 {% endif %}
 
 {% if "centos6" in os_types or "centos7" in os_types%}
@@ -2948,8 +2971,12 @@ jobs:
       - get: bin_gpdb_centos7
         trigger: [[ test_trigger ]]
         passed: [gate_advanced_analytics_start]
+      - get: bin_gpdb_rhel8
+        trigger: [[ test_trigger ]]
+        passed: [gate_advanced_analytics_start]
       - get: gpdb6-centos6-build
       - get: gpdb6-centos7-build
+      - get: gpdb6-rhel8-test
   - in_parallel:
     - task: build_madlib_gppkg_from_source_centos6
       file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
@@ -2973,6 +3000,17 @@ jobs:
         TEST_OS: centos7
         DB_TYPE: gpdb6
         CMAKE_BUILD_TYPE: Release
+    - task: build_madlib_gppkg_from_source_rhel8
+      file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
+      image: gpdb6-rhel8-test
+      input_mapping:
+        bin_gpdb: bin_gpdb_rhel8
+      output_mapping:
+        madlib_master_artifacts: madlib_master_artifacts_rhel8
+      params:
+        TEST_OS: rhel8
+        DB_TYPE: gpdb6
+        CMAKE_BUILD_TYPE: Release
   - in_parallel:
     - put: madlib_gppkg_centos6
       params:
@@ -2980,6 +3018,9 @@ jobs:
     - put: madlib_gppkg_centos7
       params:
         file: madlib_master_artifacts_centos7/madlib-*.gppkg
+    - put: madlib_gppkg_rhel8
+      params:
+        file: madlib_master_artifacts_rhel8/madlib-*.gppkg
 {% endif %}
 
 {% if "centos6" in os_types %}
@@ -3077,6 +3118,54 @@ jobs:
       ORCA: "on"
       DBVER: gpdb6
 {% endif %}
+
+{% if "rhel8" in os_types %}
+- name: MADlib_Test_planner_rhel8
+  plan:
+  - in_parallel:
+      steps:
+      - get: madlib_ci
+      - get: gpdb_src
+        passed: [madlib_build_gppkg]
+      - get: bin_gpdb
+        resource: bin_gpdb_rhel8
+        passed: [madlib_build_gppkg]
+      - get: gpdb6-rhel8-test
+      - get: madlib_gppkg
+        resource: madlib_gppkg_rhel8
+        passed: [madlib_build_gppkg]
+        trigger: true
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: gpdb6-rhel8-test
+    params:
+      TEST_OS: centos8
+      ORCA: "off"
+      DBVER: gpdb6
+
+- name: MADlib_Test_orca_rhel8
+  plan:
+  - in_parallel:
+      steps:
+      - get: madlib_ci
+      - get: gpdb_src
+        passed: [madlib_build_gppkg]
+      - get: bin_gpdb
+        resource: bin_gpdb_rhel8
+        passed: [madlib_build_gppkg]
+      - get: gpdb6-rhel8-test
+      - get: madlib_gppkg
+        resource: madlib_gppkg_rhel8
+        passed: [madlib_build_gppkg]
+        trigger: true
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: gpdb6-rhel8-test
+    params:
+      TEST_OS: centos8
+      ORCA: "on"
+      DBVER: gpdb6
+{% endif %}
 {% endif %}
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm or directed_release %}
@@ -3144,6 +3233,8 @@ jobs:
         - MADlib_Test_planner_centos6
         - MADlib_Test_orca_centos7
         - MADlib_Test_planner_centos7
+        - MADlib_Test_orca_rhel8
+        - MADlib_Test_planner_rhel8
         - pg_upgrade
         - gpexpand
         - check_centos
@@ -3191,6 +3282,8 @@ jobs:
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - resource_group_rhel8
+        - MADlib_Test_orca_rhel8
+        - MADlib_Test_planner_rhel8
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_rhel8
 {% endfor %}
