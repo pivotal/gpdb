@@ -88,6 +88,7 @@ function _main() {
   # Move hdfs output directory to output dir
   mv ${GPDB_SRC_PATH}/gpAux/extensions/gphdfs/dist gphdfs_dist/
   mv /root/.ant gphdfs_dist/
+  exit 1
 
 }
 
