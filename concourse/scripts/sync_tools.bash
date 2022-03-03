@@ -78,10 +78,10 @@ function _main() {
         ;;
   esac
 
-  make_sync_tools
+  #make_sync_tools
 
   # Move ext directory to output dir
-  mv ${GPDB_SRC_PATH}/gpAux/ext gpAux_ext/
+  #mv ${GPDB_SRC_PATH}/gpAux/ext gpAux_ext/
 
   make_gphdfs_dist
 
