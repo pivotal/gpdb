@@ -501,6 +501,18 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/win32/gpdb5-artifacts-win32-(1\.0\.0).tar.gz
   type: gcs
+- name: postgis_artifacts_centos6
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/postgis-artifacts-centos6-(1\.0\.0).tar.gz
+  type: gcs
+- name: postgis_artifacts_centos7
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/postgis-artifacts-centos7-(1\.0\.0).tar.gz
+  type: gcs
 
 {% if pipeline_type == "prod" %}
 - name: bin_gpdb_centos6_icw_green
@@ -2960,16 +2972,15 @@ jobs:
       - gate_advanced_analytics_start
     - get: centos-gpdb-dev-[[ platform_version ]]
     - get: gcc_4.4.2_snowflake
+    - get: postgis_artifacts_[[ platform ]]
   - in_parallel:
     - task: postgis_gpdb_build
       file: madlib_ci/concourse/tasks/build_postgis.yml
       image: centos-gpdb-dev-[[ platform_version ]]
+      input_mapping:
+        postgis_artifacts: postgis_artifacts_[[ platform ]]
       params:
         TEST_OS: [[ platform ]]
-        IVYREPO_HOST: {{ivyrepo_host}}
-        IVYREPO_REALM: {{ivyrepo_realm}}
-        IVYREPO_USER: {{ivyrepo_user}}
-        IVYREPO_PASSWD: {{ivyrepo_passwd}}
   - in_parallel:
     - put: postgis_gppkg_[[ platform ]]
       params:
@@ -3024,16 +3035,15 @@ jobs:
       passed:
       - postgis_build_centos[[ platform_version ]]
     - get: gcc_4.4.2_snowflake
+    - get: postgis_artifacts_centos[[ platform_version ]]
   - task: test_postgis
     file: madlib_ci/concourse/tasks/test_postgis.yml
     image: centos-gpdb-dev-[[ platform_version ]]
+    input_mapping:
+        postgis_artifacts: postgis_artifacts_centos[[ platform_version ]]
     params:
       PGOPTIONS: '-c optimizer=[[ orca_state ]]'
       TEST_OS: centos[[ platform_version ]]
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
 
 {% endfor %}
 - name: gate_advanced_analytics_end
