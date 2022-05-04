@@ -819,7 +819,7 @@ GET_PG_PID_ACTIVE () {
 		PG_LOCK_NETSTAT=""
 		if [ x"" == x"$HOST" ];then
 			#See if we have a netstat entry for this local host
-			PORT_ARRAY=(`$SS -an 2>/dev/null |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u`)
+			PORT_ARRAY=(`$SS -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}"|$AWK '{print $5}'|$AWK -F"." '{print $NF}'|$SORT -u`)
 			for P_CHK in ${PORT_ARRAY[@]}
 			do
 				if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
@@ -867,7 +867,7 @@ GET_PG_PID_ACTIVE () {
 			if [ $RETVAL -ne 0 ];then
 				PID=0
 			else
-				PORT_ARRAY=($( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST $SS -an 2>/dev/null |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u))
+				PORT_ARRAY=($( REMOTE_EXECUTE_AND_GET_OUTPUT "$SS -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $5}'|$AWK -F"." '{print $NF}'|$SORT -u))
 				for P_CHK in ${PORT_ARRAY[@]}
 				do
 					if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi

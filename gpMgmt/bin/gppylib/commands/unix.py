@@ -581,8 +581,8 @@ class Hostname(Command):
 class PgPortIsActive(Command):
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
-        cmdStr = "%s -an 2>/dev/null |%s '{for (i =1; i<=NF ; i++) if ($i==\"%s\") print $i}'" % \
-                 (findCmdInPath('ss'), findCmdInPath('awk'), file)
+        cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $5}'" % \
+                 (findCmdInPath('ss'), findCmdInPath('grep'), file, findCmdInPath('awk'))
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     def contains_port(self):
