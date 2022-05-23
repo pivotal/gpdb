@@ -498,7 +498,7 @@ resources:
 - name: ccp_src
   type: git
   source:
-    branch: ((ccp-git-branch))
+    branch: add-rhel8-gpdb7-dev
     private_key: ((ccp-git-key))
     uri: ((ccp-git-remote))
 
@@ -1716,13 +1716,13 @@ jobs:
         <<: *ccp_default_params
         vars:
           <<: *ccp_default_vars
-          PLATFORM: rhel8-gpdb7
+          PLATFORM: rhel8-gpdb7-dev
           instance_type: n1-standard-2
     - task: gen_cluster
       file: ccp_src/ci/tasks/gen_cluster.yml
       params:
         <<: *ccp_gen_cluster_default_params
-        PLATFORM: rhel8-gpdb7
+        PLATFORM: rhel8-gpdb7-dev
     - task: gpinitsystem
       file: ccp_src/ci/tasks/gpinitsystem.yml
     - task: run_tests
@@ -2028,13 +2028,13 @@ jobs:
             vars:
               <<: *ccp_default_vars
               instance_type: n1-standard-2
-              PLATFORM: rhel8-gpdb7
+              PLATFORM: rhel8-gpdb7-dev
               [[ test.additional_ccp_vars ]]
         - task: gen_cluster
           file: ccp_src/ci/tasks/gen_cluster.yml
           params:
             <<: *ccp_gen_cluster_default_params
-            PLATFORM: rhel8-gpdb7
+            PLATFORM: rhel8-gpdb7-dev
         {% if test.reserve_spare_hosts %}
         - get: alpine-docker
         - task: reserve_spare_hosts
