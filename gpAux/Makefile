@@ -118,7 +118,7 @@ DEBUGFLAGS="$(strip $(BLD_CFLAGS) $(CFLAGS_OPT) $(DEBUG_CFLAGS_OPT))"
 
 DEFPORT=5432
 
-ORCA_CONFIG=--enable-orca
+ORCA_CONFIG=--disable-orca
 
 rhel6_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
 rhel7_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap
