@@ -14691,13 +14691,13 @@ fi
 # Check for xerces if GPORCA is enabled.
 if test "$enable_orca" = yes; then
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for strnicmp in -lxerces-c" >&5
-$as_echo_n "checking for strnicmp in -lxerces-c... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for strnicmp in -lxerces-c-3.2" >&5
+$as_echo_n "checking for strnicmp in -lxerces-c-3.2... " >&6; }
 if ${ac_cv_lib_xerces_c_strnicmp+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lxerces-c  $LIBS"
+LIBS="-lxerces-c-3.2  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -14732,7 +14732,7 @@ if test "x$ac_cv_lib_xerces_c_strnicmp" = xyes; then :
 #define HAVE_LIBXERCES_C 1
 _ACEOF
 
-  LIBS="-lxerces-c $LIBS"
+  LIBS="-lxerces-c-3.2 $LIBS"
 
 else
   as_fn_error $? "library xerces-c is required to build with GPORCA" "$LINENO" 5

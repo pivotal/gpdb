@@ -426,7 +426,7 @@
 /* Define to 1 if you have the `wldap32' library (-lwldap32). */
 #undef HAVE_LIBWLDAP32
 
-/* Define to 1 if you have the `xerces-c' library (-lxerces-c). */
+/* Define to 1 if you have the `xerces-c' library (-lxerces-c-3.2). */
 #undef HAVE_LIBXERCES_C
 
 /* Define to 1 if you have the `xml2' library (-lxml2). */

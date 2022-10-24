@@ -86,13 +86,13 @@ function include_dependencies() {
 	library_search_path+=(/lib64 /usr/lib64 /lib /usr/lib)
 
 	pkgconfigs=(quicklz.pc)
-	vendored_libs=(libquicklz.so{,.1,.1.5.0} libxerces-c{,-3.1}.so)
+	vendored_libs=(libquicklz.so{,.1,.1.5.0})
 
-	# If not building for rhel8, vendor libzstd and libuv shared library, headers, and pkgconfig
-	if [[ "${BLD_ARCH}" != "rhel8_x86_64"* ]]; then
+	# If not building for rhel8 or rocky8, vendor libzstd and libuv shared library, headers, and pkgconfig
+	if [[ "${BLD_ARCH}" != "rhel8_x86_64"* && "${BLD_ARCH}" != "rocky8"* ]]; then
 		vendored_headers=(zstd*.h uv.h uv)
 		pkgconfigs+=(libzstd.pc libuv.pc)
-		vendored_libs+=(libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0})
+		vendored_libs+=(libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0} libxerces-c{,-3.1}.so)
 
 		# Vendor headers - follow symlinks
 		for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]]; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
