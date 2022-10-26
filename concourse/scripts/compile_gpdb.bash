@@ -44,9 +44,9 @@ function generate_build_number() {
 function build_gpdb() {
 	pushd ${GPDB_SRC_PATH}/gpAux
 	if [ -n "$1" ]; then
-		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
+		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)"  dist
 	else
-		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
+		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)"  dist
 	fi
 	popd
 }
