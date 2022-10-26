@@ -1572,7 +1572,7 @@ jobs:
           - get: gpdb7-rocky8-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
-      tags: [icw-rocky8]
+      tags: [icw-rhel8]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-rocky8-test
@@ -1595,7 +1595,7 @@ jobs:
           - get: gpdb7-rocky8-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
-      tags: [icw-rocky8]
+      tags: [icw-rhel8]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-rocky8-test
@@ -1623,7 +1623,7 @@ jobs:
           - get: gpdb7-rocky8-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
-      tags: [icw-rocky8]
+      tags: [icw-rhel8]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-rocky8-test
@@ -1646,7 +1646,7 @@ jobs:
           - get: gpdb7-rocky8-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
-      tags: [icw-rocky8]
+      tags: [icw-rhel8]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-rocky8-test
@@ -1669,7 +1669,7 @@ jobs:
           - get: gpdb7-rocky8-test
     - task: ic_gpdb
       {% if use_ICW_workers %}
-      tags: [icw-rocky8]
+      tags: [icw-rhel8]
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-rocky8-test
@@ -1690,7 +1690,7 @@ jobs:
             trigger: [[ test_trigger ]]
           - get: gpdb7-rocky8-test
     - task: ic_gpdb
-      tags: [icw-rocky8]
+      tags: [icw-rhel8]
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-rocky8-test
       timeout: 24h
