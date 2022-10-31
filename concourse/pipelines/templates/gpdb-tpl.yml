@@ -2581,7 +2581,7 @@ jobs:
           params:
             {% if test.sudo_access_on_hosts %}
             SUDO_ACCESS_ON_HOSTS: 1
-            SUDO_MDW_USERNAME: rhel
+            SUDO_MDW_USERNAME: rocky
             {% endif %}
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
             [[ test.env ]]
