@@ -2148,13 +2148,13 @@ jobs:
         <<: *ccp_default_params
         vars:
           <<: *ccp_default_vars
-          PLATFORM: rocky8-gpdb7
+          PLATFORM: rocky-linux-8-gpdb7
           instance_type: n1-standard-2
     - task: gen_cluster
       file: ccp_src/ci/tasks/gen_cluster.yml
       params:
         <<: *ccp_gen_cluster_default_params
-        PLATFORM: rocky8-gpdb7
+        PLATFORM: rocky-linux-8-gpdb7
     - task: gpinitsystem
       file: ccp_src/ci/tasks/gpinitsystem.yml
     - task: run_tests
@@ -2547,13 +2547,13 @@ jobs:
             vars:
               <<: *ccp_default_vars
               instance_type: n1-standard-2
-              PLATFORM: rocky8-gpdb7
+              PLATFORM: rocky-linux-8-gpdb7
               [[ test.additional_ccp_vars ]]
         - task: gen_cluster
           file: ccp_src/ci/tasks/gen_cluster.yml
           params:
             <<: *ccp_gen_cluster_default_params
-            PLATFORM: rocky8-gpdb7
+            PLATFORM: rocky-linux-8-gpdb7
         {% if test.reserve_spare_hosts %}
         - get: alpine-docker
         - task: reserve_spare_hosts
