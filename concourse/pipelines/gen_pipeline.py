@@ -80,7 +80,7 @@ def suggested_git_remote():
 def suggested_git_branch():
     """Try to guess the current git branch"""
     branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode('utf-8').rstrip()
-    if branch == "master" or is_a_base_branch(branch):
+    if branch == "main" or is_a_base_branch(branch):
         return "<branch-name>"
     return branch
 

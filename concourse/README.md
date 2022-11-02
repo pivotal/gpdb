@@ -26,7 +26,7 @@ The Concourse directory should contain this README and three sub-directories onl
 There should be just a handful of pipelines in this directory:
 
 * `pipeline.yml` the pipeline that compiles, tests, and produces installers
-  from the master branch of gpdb.
+  from the main branch of gpdb.
 * `dev_generate_installer.yml` which compiles and generates an installer for
   the given source and saves it to a dev bucket.
 * `pr_pipeline.yml` which compiles and tests pull requests.
@@ -42,13 +42,13 @@ There are some exceptions to this rule.
 Please do not create any more exceptions, and remove these as the occasion arises:
 
 * `package_tarball.yml` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/main/concourse/pipeline.yml)
 * `test_with_planner.yml` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/main/concourse/pipeline.yml)
 * `test_with_orca.yml` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/main/concourse/pipeline.yml)
 * `build_with_orca.yml` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/main/concourse/pipeline.yml)
 
 #### Scripts Directory
 All script files should live in this directory.
@@ -58,7 +58,7 @@ There are some exceptions to this rule.
 Please do not create any more exceptions, and remove these as the occasion arises:
 
 * `package_tarball.bash` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/main/concourse/pipeline.yml)
 
 ### The Concourse Deployment
 There is a `gpdb` team in the
@@ -66,7 +66,7 @@ There is a `gpdb` team in the
 Use this team to create any pipelines instead of the `main` team.
 
 ### Creating Your Own Pipeline
-Many developers want to create their own copies of the master pipeline.
+Many developers want to create their own copies of the main pipeline.
 
 To accommodate this without naming confusion, workload instability,
 nor artifact collision, please follow instructions in pipelines
@@ -75,8 +75,8 @@ nor artifact collision, please follow instructions in pipelines
 #### Notes and warnings
 
 * Clean up your dev pipelines when you are finished with them. (Use `fly destroy-pipeline`)
-* Be sure to use a unique name for your pipeline. Don't blow away the master
-  pipeline by using `gpdb_master` when setting your dev pipeline. Try to prefix
+* Be sure to use a unique name for your pipeline. Don't blow away the main
+  pipeline by using `gpdb_main` when setting your dev pipeline. Try to prefix
   your pipeline name with `dev:`
 * Please pause the pulse jobs (the rightmost column of builds). If you are
   working on one, that's fine, but pause all of the others. We've had issues

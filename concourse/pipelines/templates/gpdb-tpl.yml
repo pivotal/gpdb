@@ -750,7 +750,7 @@ resources:
 - name: postgis_src
   type: git
   source:
-    branch: master
+    branch: main
     tag_filter: rel/v2.1.5+pivotal.2
     uri: https://github.com/greenplum-db/geospatial.git
 

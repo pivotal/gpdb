@@ -24,7 +24,7 @@ gpaddon-git-branch: 5X_STABLE
 gpdb_src-trigger-flag: true
 gcs-bucket: pivotal-gpdb-concourse-resources-prod
 gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-prod
-ccp-git-branch: master
+ccp-git-branch: main
 ccp-git-remote: git@github.com:pivotal/gp-concourse-cluster-provisioner.git
 gpdb-stable-builds-bucket-name: gpdb-stable-concourse-builds
 gpdb4-bucket-name: gpdb-4.3-stable-concourse
@@ -48,7 +48,7 @@ pivotal-gp-internal-artifacts-gcs-bucket: gp-internal-artifacts
 # Where to export release candidates based on how they are built: debug or prod
 # Note that `debug` usually indicates assert builds but we are using it for
 # non-assert builds in 5X because need to have the same filename across all
-# default pipelines (e.g. 5X_STABLE, 6X_STABLE, gpdb_master)
+# default pipelines (e.g. 5X_STABLE, 6X_STABLE, gpdb_main)
 rc-build-type: debug
 rc-build-type-gcs: ".debug"
 pivotal-gpdb-pivnet-product-version: ^5\.0\.0$
