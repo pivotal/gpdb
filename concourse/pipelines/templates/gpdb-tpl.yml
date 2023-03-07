@@ -381,7 +381,7 @@ resources:
 - name: ccp_src
   type: git
   source:
-    branch: ((gp-concourse-cluster-provisioner-git-branch))
+    branch: GPR-1227-rm-python39-devel
     private_key: ((gp-concourse-cluster-provisioner-git-key))
     uri: ((gp-concourse-cluster-provisioner-git-remote))
 
@@ -451,7 +451,7 @@ resources:
 - name: gpdb7-[[ os_type ]]-test
   type: registry-image
   source:
-    tag: latest
+    tag: dev
 {% if os_type == "rhel8" %}
     repository: gcr.io/data-gpdb-private-images/gpdb7-[[ os_type ]]-test
     username: _json_key

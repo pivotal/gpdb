@@ -38,7 +38,9 @@ function _main() {
 
     # Run some of the following commands in a subshell so that they do not
     # pollute the environment after sourcing greenplum_path.
+    yum install -y python39-devel
     (install_and_configure_gpdb)
+    yum remove -y python39-devel
     setup_gpadmin_user
     (make_cluster)
 
