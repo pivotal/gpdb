@@ -28,7 +28,9 @@ function setup_gpadmin_user() {
 }
 
 function _main() {
+	yum install -y python39-devel
 	time install_and_configure_gpdb
+	yum remove -y python39-devel
 	time setup_gpadmin_user
 	time gen_env
 
