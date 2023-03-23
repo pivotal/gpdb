@@ -828,21 +828,12 @@ resources:
     tag_filter: ((madlib-ci-tag-filter))
     uri: ((madlib-ci-git-remote))
     private_key: ((madlib-ci-git-key))
-{% if os_type == "ubuntu18.04" %}
-- name: madlib_master_deb
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_madlib_deb_ubuntu18/madlib-master-Linux.ubuntu18.deb
-{% else %}
 - name: madlib_gppkg_[[ os_type ]]
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/madlib_gppkg/madlib-master-gp6-[[ os_type ]]-x86_64.gppkg
-{% endif %}
 - name: cmake_tar
   type: gcs
   source:
@@ -2095,37 +2086,6 @@ jobs:
       - get: bin_gpdb
         passed:
         - compile_gpdb_[[ os_type ]]
-{% if os_type == "ubuntu18.04" %}
-- name: madlib_build_gppkg_[[ os_type ]]
-  plan:
-  - in_parallel:
-      steps:
-      - get: madlib_src
-      - get: madlib_ci
-      - get: cmake_tar
-      - get: pyxb
-      - get: eigen
-      - get: boost
-      - get: gpdb_src
-        passed: [gate_advanced_analytics_start]
-      - get: bin_gpdb
-        trigger: [[ test_trigger ]]
-        passed: [gate_advanced_analytics_start]
-      - get: gpdb6-[[ os_type ]]-test
-  - in_parallel:
-    - task: build_madlib_debian
-      file: madlib_ci/concourse/tasks/madlib_master_build_ubuntu.yml
-      image: gpdb6-[[ os_type ]]-test
-      params:
-        TEST_OS: ubuntu18
-        DB_TYPE: all
-        CMAKE_BUILD_TYPE: Release
-        GCC_VERSION: "gcc6"
-  - in_parallel:
-    - put: madlib_master_deb
-      params:
-        file: madlib_master_deb/madlib-*ubuntu18*.deb
-{% else %}
 - name: madlib_build_gppkg_[[ os_type ]]
   plan:
   - in_parallel:
@@ -2149,7 +2109,7 @@ jobs:
   - in_parallel:
     - task: build_madlib_gppkg_from_source_[[ os_type ]]
       file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
-      {% if os_type == "centos6" or os_type == "centos7" %}
+      {% if os_type == "centos6" %}
       image: gpdb6-[[ os_type ]]-build
       {% else %}
       image: gpdb6-[[ os_type ]]-test
@@ -2157,14 +2117,18 @@ jobs:
       output_mapping:
         madlib_master_artifacts: madlib_master_artifacts_[[ os_type ]]
       params:
+        {% if os_type == "ubuntu18.04" %}
+        TEST_OS: ubuntu18
+        {% else %}
         TEST_OS: [[ os_type ]]
+        {% endif %}
         DB_TYPE: gpdb6
         CMAKE_BUILD_TYPE: Release
   - in_parallel:
     - put: madlib_gppkg_[[ os_type ]]
       params:
         file: madlib_master_artifacts_[[ os_type ]]/madlib-*.gppkg
-{% endif %}
+
 - name: MADlib_Test_planner_[[ os_type ]]
   plan:
   - in_parallel:
@@ -2175,37 +2139,21 @@ jobs:
       - get: bin_gpdb
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
-      {% if os_type == "ubuntu18.04" %}
-      - get: madlib_src
-      - get: cmake_tar
-      - get: pyxb
-      - get: eigen
-      - get: boost
-      - get: madlib_master_deb
-      {% else %}
       - get: madlib_gppkg
         resource: madlib_gppkg_[[ os_type ]]
-      {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
         trigger: true
   - task: MADlib_Test
-    {% if os_type == "ubuntu18.04" %}
-    file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
-    image: gpdb6-[[ os_type ]]-test
-    params:
-      TEST_OS: ubuntu18
-      DB_TYPE: gpdb6
-      ORCA: "off"
-      CMAKE_BUILD_TYPE: Release
-      GCC_VERSION: "gcc6"
-    {% else %}
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: gpdb6-[[ os_type ]]-test
     params:
+      {% if os_type == "ubuntu18.04" %}
+      TEST_OS: ubuntu18
+      {% else %}
       TEST_OS: [[ os_type ]]
+      {% endif %}
       ORCA: "off"
       DBVER: gpdb6
-    {% endif %}
 
 - name: MADlib_Test_orca_[[ os_type ]]
   plan:
@@ -2217,37 +2165,21 @@ jobs:
       - get: bin_gpdb
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
-      {% if os_type == "ubuntu18.04" %}
-      - get: madlib_src
-      - get: cmake_tar
-      - get: pyxb
-      - get: eigen
-      - get: boost
-      - get: madlib_master_deb
-      {% else %}
       - get: madlib_gppkg
         resource: madlib_gppkg_[[ os_type ]]
-      {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
         trigger: true
   - task: MADlib_Test
-    {% if os_type == "ubuntu18.04" %}
-    file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
-    image: gpdb6-[[ os_type ]]-test
-    params:
-      TEST_OS: ubuntu18
-      DB_TYPE: gpdb6
-      ORCA: "on"
-      CMAKE_BUILD_TYPE: Release
-      GCC_VERSION: "gcc6"
-    {% else %}
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: gpdb6-[[ os_type ]]-test
     params:
-      TEST_OS: [[ os_type ]]
+      {% if os_type == "ubuntu18.04" %}
+      TEST_OS: ubuntu18
+      {% else %}
+      TEST_OS: [ [ os_type ] ]
+      {% endif %}
       ORCA: "on"
       DBVER: gpdb6
-    {% endif %}
 {% endif %}
 
 {% if pipeline_configuration == "prod" or build_test_rc_rpm or directed_release %}
