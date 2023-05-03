@@ -76,6 +76,32 @@ exec clang.orig \$@
 EOF
         chmod +x $clang_path
 
+        local id="$(. /etc/os-release && echo "${ID}")"
+        case ${id} in
+          ubuntu)
+            install_llvm_with_asserts_deb
+            ;;
+          rocky | rhel | ol)
+            install_llvm_with_asserts_rpm
+            ;;
+          *)
+            echo "the platform not support install llvm enable asserts"
+            exit 1
+            ;;
+        esac
+
+        # check if llvm assertion is ON now
+        assertion_mode=$(llvm-config --assertion-mode)
+        if [ "$assertion_mode" = "OFF" ];then
+            echo "llvm assertion is still not enabled"
+            exit 1
+        fi
+
+        popd
+    fi
+}
+
+function install_llvm_with_asserts_rpm() {
         # version check: replace llvm with mismatched version is not expected
         local installed_version=$(rpm -q --queryformat='%{version}' llvm)
         local installed_release=$(rpm -q --queryformat='%{release}' llvm |grep -Po '^\d+')
@@ -116,16 +142,13 @@ EOF
         fi
 
         yum install -y $llvm_package_list
+}
 
-        # check if llvm assertion is ON now
-        assertion_mode=$(llvm-config --assertion-mode)
-        if [ "$assertion_mode" = "OFF" ];then
-            echo "llvm assertion is still not enabled"
-            exit 1
-        fi
-
-        popd
-    fi
+function install_llvm_with_asserts_deb() {
+  echo "extracting llvm packages:"
+  tar -xzvf llvm-with-asserts-*.tar.gz
+  apt-get update
+  apt-get install -y ./*.deb
 }
 
 

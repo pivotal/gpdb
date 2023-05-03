@@ -97,14 +97,21 @@ def create_pipeline(args, git_remote, git_branch):
     os_username = {
         "rhel8" : "rhel",
         "rocky8" : "rocky",
-        "oel8" : "oel"
+        "oel8" : "oel",
+        "ubuntu20.04" : "ubuntu"
     }
     test_os = {
         "rhel8" : "centos",
         "rocky8": "centos",
-        "oel8" : "centos"
+        "oel8" : "centos",
+        "ubuntu20.04" : "ubuntu"
     }
-
+    compile_platform = {
+        "rhel8": "rocky8",
+        "rocky8": "rocky8",
+        "oel8": "rocky8",
+        "ubuntu20.04": "ubuntu20.04",
+    }
 
     context = {
         'template_filename': args.template_filename,
@@ -118,6 +125,7 @@ def create_pipeline(args, git_remote, git_branch):
         'test_sections': args.test_sections,
         'use_ICW_workers': args.use_ICW_workers,
         'build_test_rc_rpm': args.build_test_rc_rpm,
+        'compile_platform': compile_platform[args.os_type],
         'directed_release': args.directed_release,
         'git_username': git_remote.split('/')[-2],
         'git_branch': git_branch,
@@ -239,7 +247,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['rhel8', 'rocky8', 'oel8'],
+        choices=['rhel8', 'rocky8', 'oel8', 'ubuntu20.04'],
         help='OS value to support'
     )
 

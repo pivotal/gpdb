@@ -86,7 +86,7 @@ function include_dependencies() {
 	vendored_libs=(libxerces-c{,-3.1}.so)
 
 	# Vendor shared libraries - follow symlinks
-	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done
+	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib  2> >(grep -v "File system loop detected") \;; done; fi; done
 }
 function export_gpdb() {
 	TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_BIN_FILENAME}"

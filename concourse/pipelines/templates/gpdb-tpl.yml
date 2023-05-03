@@ -208,7 +208,7 @@ groups:
   - compile_gpdb_clients_windows
   - Publish Server Builds
   {% endif %}
-  - compile_gpdb_[[ default_os_type ]]
+  - compile_gpdb_[[ compile_platform ]]
   - test_gpdb_clients_[[ os_type ]]
   - gate_compile_end
 {% if "ICW" in test_sections %}
@@ -265,7 +265,7 @@ groups:
 - name: Compile
   jobs:
   - gate_compile_start
-  - compile_gpdb_[[ default_os_type ]]
+  - compile_gpdb_[[ compile_platform ]]
   - test_gpdb_clients_[[ os_type ]]
   {% if os_type == default_os_type %}
   - compile_gpdb_clients_windows
@@ -398,7 +398,7 @@ resources:
     - gpdb-doc/*
     - README*
 
-{% if os_type == default_os_type or (os_type != default_os_type and "ICW" in test_sections) %}
+{% if os_type != default_os_type or "ICW" in test_sections %}
 - name: gpdb7-[[ os_type ]]-build
   type: registry-image
   source:
@@ -515,7 +515,11 @@ resources:
   source:
     bucket: pivotal-gpdb-concourse-resources-prod
     json_key: ((concourse-gcs-resources-service-account-key))
+    {% if os_type == "oel8" or os_type == "rhel8"  %}
     regexp: gp-internal-artifacts/[[ default_os_type ]]/llvm-with-asserts-(.*)-el8_x86_64.tar.gz
+    {% else %}
+    regexp: gp-internal-artifacts/[[ os_type ]]/llvm-with-asserts-(.*)-[[ os_type ]]_x86_64.tar.gz
+    {% endif %}
 
 {% if os_type == default_os_type %}
 - name: server-build-[[ os_type ]]
@@ -604,7 +608,7 @@ jobs:
       {% endif %}
 {% endif %}
 
-- name: compile_gpdb_[[ default_os_type ]]
+- name: compile_gpdb_[[ compile_platform ]]
   plan:
   - in_parallel:
       steps:
@@ -616,10 +620,10 @@ jobs:
           - gate_compile_start
           {% endif %}
         trigger: true
-      - get: gpdb7-[[ default_os_type ]]-build
+      - get: gpdb7-[[ compile_platform ]]-build
       - get: llvm-with-asserts-packages
   - task: compile_gpdb
-    image: gpdb7-[[ default_os_type ]]-build
+    image: gpdb7-[[ compile_platform ]]-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       CONFIGURE_FLAGS: ((configure_flags_with_extensions))
@@ -640,11 +644,11 @@ jobs:
         steps:
           - get: gpdb_src
             trigger: true
-            passed: [compile_gpdb_[[ default_os_type ]]]
+            passed: [compile_gpdb_[[ compile_platform ]]]
           - get: bin_gpdb
-            passed: [compile_gpdb_[[ default_os_type ]]]
+            passed: [compile_gpdb_[[ compile_platform ]]]
           - get: bin_gpdb_clients
-            passed: [compile_gpdb_[[ default_os_type ]]]
+            passed: [compile_gpdb_[[ compile_platform ]]]
           - get: gpdb7-[[ os_type ]]-test
     - task: run_tests
       image: gpdb7-[[ os_type ]]-test
@@ -684,9 +688,9 @@ jobs:
           - get: gpdb_src
             trigger: true
             passed:
-              - compile_gpdb_[[ default_os_type ]]
+              - compile_gpdb_[[ compile_platform ]]
           - get: bin_gpdb
-            passed: [compile_gpdb_[[ default_os_type ]]]
+            passed: [compile_gpdb_[[ compile_platform ]]]
           - get: gpdb7-[[ default_os_type ]]-build
     - task: rename server build artifacts
       image: gpdb7-[[ default_os_type ]]-build
