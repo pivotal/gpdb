@@ -1686,18 +1686,26 @@ jobs:
         args:
           - -c
           - |
-            set -e
+            set -ex
 
             ccp_src/scripts/setup_ssh_to_cluster.sh
             ssh -t cdw <<EOF
-                set -e
-                cat /proc/sys/crypto/fips_enabled
+                set -ex
+                if cat /proc/sys/crypto/fips_enabled | grep --quiet 0; then
+                    echo "fips mode is not enabled"
+                    exit 1
+                fi
                 # python regression test for "ERROR:root:code for hash md5 was not found."
                 if ! python -c "import hashlib"; then
                     echo "Failed to import hashlib on a FIPS enabled environment."
                     exit 1
                 fi
-                echo "Successfully imported hashlib on a FIPS enabled environment."
+                source /usr/local/greenplum-db-devel/greenplum_path.sh
+                export MASTER_DATA_DIRECTORY='/data/gpdata/coordinator/gpseg-1'
+                if ! gpstate -s; then
+                    echo "Failed to execute gpstate -s"
+                    exit 1
+                fi
             EOF
     on_success:
       <<: *ccp_destroy
