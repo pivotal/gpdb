@@ -101,7 +101,8 @@ def create_pipeline(args, git_remote, git_branch):
         "oel8" : "oel",
         "rhel9" : "rhel",
         "rocky9" : "rocky",
-        "oel9" : "oel"
+        "oel9" : "oel",
+        "ubuntu20.04": "ubuntu"
     }
     test_os = {
         "rhel8" : "centos",
@@ -109,7 +110,8 @@ def create_pipeline(args, git_remote, git_branch):
         "oel8" : "centos",
         "rhel9" : "centos",
         "rocky9": "centos",
-        "oel9" : "centos"
+        "oel9" : "centos",
+        "ubuntu20.04" : "ubuntu"
     }
     compile_platform = {
         "rhel8" : "rocky8",
@@ -117,7 +119,8 @@ def create_pipeline(args, git_remote, git_branch):
         "oel8" : "rocky8",
         "rhel9" : "rocky9",
         "rocky9": "rocky9",
-        "oel9" : "rocky9"
+        "oel9" : "rocky9",
+        "ubuntu20.04": "ubuntu20.04",
     }
 
 
@@ -255,7 +258,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['rhel8', 'rocky8', 'oel8', 'rhel9', 'rocky9', 'oel9'],
+        choices=['rhel8', 'rocky8', 'oel8', 'rhel9', 'rocky9', 'oel9', 'ubuntu20.04'],
         help='OS value to support'
     )
 
