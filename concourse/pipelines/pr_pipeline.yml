@@ -17,7 +17,6 @@ resources:
       repository: greenplum-db/gpdb
       access_token: ((gpdb-git-access-token))
       base_branch: "5X_STABLE"
-      disable_forks: true
       ignore_paths:
         - gpdb-doc/*
         - README*
