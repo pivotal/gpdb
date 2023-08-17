@@ -111,7 +111,7 @@ The generated pipeline file `gpdb_6X_STABLE-generated.yml` will be set,
 validated and ultimately committed (including the updated pipeline
 template) to the source repository.
 
-Create and update 6X_STABLE_centos7, 6X_STABLE_centos6, 6X_STABLE_rhel8, 6X_STABLE_ubuntu18.04 pipelines:
+Create ad update 6X_STABLE_centos7, 6X_STABLE_centos6, 6X_STABLE_rhel8, 6X_STABLE_ubuntu18.04 pipelines:
 
 ```
 $ ./gen_pipeline.py -t prod -O centos7
